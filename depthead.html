@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Department Head Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Fraunces', serif; }
+  .font-mono { font-family: 'IBM Plex Mono', monospace; }
+  .nav-btn.active { background:#D9A62C; color:#14432A; font-weight:600; }
+  .tab-btn.active { background:#14432A; color:#fff; }
+  .seal { background: repeating-linear-gradient(135deg, #D9A62C 0 3px, transparent 3px 8px); }
+</style>
+</head>
+<body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
+
+<!-- ══════════════════════════ APP SHELL ══════════════════════════ -->
+<div id="appShell" class="hidden flex flex-col md:flex-row md:min-h-[680px] rounded-xl overflow-hidden border border-[#E3DFC8] max-w-6xl mx-auto shadow-sm">
+
+  <!-- SIDEBAR -->
+  <aside class="w-full md:w-64 bg-[#14432A] p-4 flex flex-col gap-1 shrink-0">
+    <div class="px-2 pb-5 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full seal shrink-0"></div>
+      <div>
+        <div class="font-display text-lg font-bold text-white leading-tight">Department Head</div>
+        <div id="sidebarDept" class="text-xs text-[#9FC2AC] mt-0.5">—</div>
+      </div>
+    </div>
+
+    <button data-view="home" onclick="showView('home')"
+      class="nav-btn active flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>⌂</span> Home
+    </button>
+    <button data-view="forms" onclick="showView('forms')"
+      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>▤</span> Forms
+    </button>
+    <button data-view="faculty" onclick="showView('faculty')"
+      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>🎓</span> Faculty
+    </button>
+    <button data-view="students" onclick="showView('students')"
+      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>👥</span> Students
+    </button>
+    <button data-view="mysubjects" onclick="showView('mysubjects')"
+      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>📘</span> My Subjects
+    </button>
+    <button id="manageAccountsNavBtn" data-view="manageaccounts" onclick="showView('manageaccounts')"
+      class="hidden nav-btn items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <span>🗂</span> Manage Accounts
+    </button>
+
+    <div class="mt-auto px-2 pt-3 border-t border-[#245C3B]">
+      <div id="sidebarName" class="text-xs text-[#D9A62C] font-semibold mb-2">—</div>
+      <a href="profile.html" class="text-xs text-[#9FC2AC] hover:text-white transition block mb-1.5">My Profile</a>
+      <button onclick="logout()" class="text-xs text-[#9FC2AC] hover:text-white transition">↩ Sign out</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 p-4 sm:p-8 overflow-y-auto relative">
+
+    <!-- STARTUP ERROR (shown by depthead.js if loading the portal fails) -->
+    <div id="startupError" class="hidden bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] text-sm rounded-lg px-4 py-3 mb-6">
+      <strong>Couldn't fully load this portal.</strong>
+      <span id="startupErrorDetail"></span>
+    </div>
+
+    <!-- HOME -->
+    <section id="view-home">
+      <h1 class="font-display text-2xl font-bold">Overview</h1>
+      <p class="text-[#6B7060] text-sm mt-1 mb-6">Snapshot of your department's faculty, students, and course requirements.</p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-7">
+        <div class="bg-white border border-[#E3DFC8] rounded-xl p-4">
+          <div id="statFaculty" class="text-xl font-bold leading-none">0</div>
+          <div class="text-xs text-[#6B7060] mt-1.5">Faculty in department</div>
+        </div>
+        <div class="bg-white border border-[#E3DFC8] rounded-xl p-4">
+          <div id="statCourses" class="text-xl font-bold leading-none">0</div>
+          <div class="text-xs text-[#6B7060] mt-1.5">Courses assigned</div>
+        </div>
+        <div class="bg-white border border-[#E3DFC8] rounded-xl p-4">
+          <div id="statStudents" class="text-xl font-bold leading-none">0</div>
+          <div class="text-xs text-[#6B7060] mt-1.5">Students on file</div>
+        </div>
+        <div class="bg-[#FBF3D9] border border-[#EFDBA0] rounded-xl p-4">
+          <div id="statPendingForms" class="text-xl font-bold leading-none text-[#8A6A0C]">0</div>
+          <div class="text-xs text-[#8A6A0C] mt-1.5">Requirement items pending</div>
+        </div>
+      </div>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-display text-base font-semibold">Recently assigned courses</h2>
+          <button onclick="showView('faculty')" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition">+ Assign course</button>
+        </div>
+        <div id="recentCoursesList" class="divide-y divide-[#F0EDDE]"></div>
+      </div>
+    </section>
+
+    <!-- FORMS -->
+    <section id="view-forms" class="hidden">
+      <h1 class="font-display text-2xl font-bold">Forms</h1>
+      <p class="text-[#6B7060] text-sm mt-1 mb-5">Track each course's submission status for the items below.</p>
+
+      <div id="formsTabs" class="flex flex-wrap gap-2 mb-5"></div>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full border-collapse">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
+              <th class="px-4 py-2.5">Course</th>
+              <th class="px-4 py-2.5">Section</th>
+              <th class="px-4 py-2.5">Faculty</th>
+              <th class="px-4 py-2.5">Status</th>
+              <th class="px-4 py-2.5">Remarks</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody id="formsBody" class="text-sm"></tbody>
+        </table></div>
+        <div id="formsEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No courses assigned yet — add one from Faculty first.</div>
+      </div>
+    </section>
+
+    <!-- FACULTY -->
+    <section id="view-faculty" class="hidden">
+      <h1 class="font-display text-2xl font-bold">Faculty</h1>
+      <p class="text-[#6B7060] text-sm mt-1 mb-4">Assign a subject/course load to a faculty member — Dean and Department Head accounts can also be assigned a subject to teach. Assigning a subject <em>is</em> the workload — its unit value is what counts toward the assignee's total load.</p>
+
+      <div id="deanDeptPicker" class="hidden mb-6 bg-[#FBF3D9] border border-[#EFDBA0] rounded-xl p-4">
+        <label class="block text-xs font-semibold text-[#8A6A0C] mb-1.5">Working in department</label>
+        <select id="deanDepartmentSelect" class="w-full max-w-xs border border-[#DEDACE] rounded-lg px-3 py-2 text-sm bg-white"></select>
+        <p class="text-xs text-[#8A6A0C] mt-1.5">As Dean, choose which department's sections, faculty, and subjects you're managing.</p>
+      </div>
+
+      <!-- SECTIONS MAINTENANCE -->
+      <div class="bg-white border border-[#E3DFC8] rounded-xl p-5 mb-6">
+        <h2 class="font-display text-base font-semibold mb-1">Sections</h2>
+        <p class="text-xs text-[#6B7060] mb-4">Maintain the section list for this department — add or remove one below, and it appears immediately in the subject form.</p>
+        <div id="sectionChips" class="mb-4"></div>
+        <div class="flex gap-2">
+          <input id="newSectionInput" placeholder="e.g. BSIT 2A" class="flex-1 max-w-xs border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
+          <button id="addSectionBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+        </div>
+      </div>
+
+      <div class="flex flex-col lg:flex-row gap-7 items-start mb-8">
+        <form id="courseForm" class="flex-1 max-w-md bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6">
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Subject/Course Number</label>
+            <input id="courseNumber" placeholder="IT 101" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            <p id="err-courseNumber" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Course Description</label>
+            <input id="courseDescription" placeholder="Introduction to Computing" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            <p id="err-courseDescription" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Unit</label>
+            <input id="courseUnit" type="number" step="0.5" min="0" placeholder="3" class="w-32 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+          </div>
+
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-[#52555C]">Section</label>
+              <button type="button" id="courseSectionQuickAddBtn" class="text-xs text-[#8A6A0C] hover:underline">+ add new</button>
+            </div>
+            <select id="courseSectionSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <option value="">Select…</option>
+            </select>
+            <div id="courseSectionQuickAddRow" class="hidden mt-2">
+              <div class="flex gap-2">
+                <input id="newCourseSectionQuickInput" placeholder="e.g. BSIT 2A" class="flex-1 border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
+                <button type="button" id="addCourseSectionQuickBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+              </div>
+            </div>
+            <p id="err-courseSectionSelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+
+          <div class="mb-1">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Schedule — Days</label>
+          </div>
+          <div id="dayTogglesContainer" class="flex flex-wrap gap-1.5 mb-3"></div>
+          <div class="flex gap-3 mb-4">
+            <div class="flex-1">
+              <label class="block text-xs text-[#6B7060] mb-1">Start time</label>
+              <input id="courseStartTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs text-[#6B7060] mb-1">End time</label>
+              <input id="courseEndTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            </div>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Assign to</label>
+            <select id="courseFacultySelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <option value="">Select…</option>
+            </select>
+            <p id="err-courseFacultySelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+
+          <div id="conflictWarning" class="hidden bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] text-xs rounded-lg px-3 py-2.5 mb-4"></div>
+
+          <button type="submit" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Assign subject</button>
+        </form>
+      </div>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full border-collapse">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
+              <th class="px-4 py-2.5">Subject</th>
+              <th class="px-4 py-2.5">Unit</th>
+              <th class="px-4 py-2.5">Section</th>
+              <th class="px-4 py-2.5">Schedule</th>
+              <th class="px-4 py-2.5">Faculty</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody id="coursesBody" class="text-sm"></tbody>
+        </table></div>
+        <div id="coursesEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No subjects assigned yet.</div>
+      </div>
+    </section>
+
+    <!-- STUDENTS -->
+    <section id="view-students" class="hidden">
+      <h1 class="font-display text-2xl font-bold">Students</h1>
+      <p class="text-[#6B7060] text-sm mt-1 mb-6">Register a student and capture their signature and biometric.</p>
+
+      <div class="flex flex-col lg:flex-row gap-7 items-start mb-8">
+        <form id="studentForm" class="flex-1 max-w-md bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6">
+          <div class="flex gap-3">
+            <div class="flex-1 mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Last Name</label>
+              <input id="studentLastName" placeholder="Santos" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <p id="err-studentLastName" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+            </div>
+            <div class="flex-1 mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">First Name</label>
+              <input id="studentFirstName" placeholder="Maria" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <p id="err-studentFirstName" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+            </div>
+          </div>
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-[#52555C]">Section</label>
+              <button type="button" id="studentSectionQuickAddBtn" class="text-xs text-[#8A6A0C] hover:underline">+ add new</button>
+            </div>
+            <select id="studentSectionSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <option value="">Select…</option>
+            </select>
+            <div id="studentSectionQuickAddRow" class="hidden mt-2">
+              <div class="flex gap-2">
+                <input id="newStudentSectionQuickInput" placeholder="e.g. BSIT 2A" class="flex-1 border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
+                <button type="button" id="addStudentSectionQuickBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+              </div>
+            </div>
+            <p id="err-studentSection" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+
+          <div class="border-t border-dashed border-[#E3DFC8] pt-4 mb-1">
+            <div class="text-xs font-semibold text-[#52555C] mb-2 uppercase tracking-wide">Identity capture <span class="normal-case font-normal text-[#8A8D93]">(optional)</span></div>
+          </div>
+
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-[#52555C]">E-Signature</label>
+              <div class="flex items-center gap-3">
+                <button type="button" id="studentUploadSignatureBtn" class="text-xs text-[#8A6A0C] hover:underline">Upload image</button>
+                <button type="button" id="studentClearSignatureBtn" class="text-xs text-[#8A6A0C] hover:underline">Clear</button>
+              </div>
+            </div>
+            <div class="border border-[#DEDACE] rounded-lg overflow-hidden bg-[#FCFBF6]">
+              <canvas id="studentSignaturePad" width="368" height="140" class="w-full h-[140px] touch-none cursor-crosshair block"></canvas>
+            </div>
+            <input type="file" id="studentSignatureFileInput" accept="image/*" class="hidden">
+            <p id="studentSignatureStatus" class="text-xs text-[#6B7060] mt-1.5">Have the student sign above with a mouse, or upload a signature image.</p>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Biometric</label>
+            <button type="button" id="studentFingerprintBtn"
+              class="w-full flex items-center justify-center gap-2 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#14432A] hover:bg-[#FAF7EF] transition">
+              <span id="studentFingerprintIcon">🔒</span> <span id="studentFingerprintLabel">Register Fingerprint</span>
+            </button>
+            <p id="studentFingerprintStatus" class="text-xs text-[#6B7060] mt-1.5">Not yet registered</p>
+          </div>
+
+          <div class="border-t border-dashed border-[#E3DFC8] pt-4 mb-1">
+            <div class="text-xs font-semibold text-[#52555C] mb-2 uppercase tracking-wide">First-time sign-in <span class="normal-case font-normal text-[#8A8D93]">(optional — leave blank to skip portal access)</span></div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Username</label>
+            <input id="studentUsername" placeholder="maria.santos" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            <p id="err-studentUsername" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Temporary Password</label>
+            <div class="flex gap-2">
+              <input id="studentTempPassword" class="font-mono flex-1 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <button type="button" id="studentGeneratePasswordBtn" class="border border-[#DEDACE] rounded-lg px-3 text-sm hover:bg-[#FAF7EF] transition">↻</button>
+            </div>
+            <p class="text-xs text-[#6B7060] mt-1">The student must set their own password on first login.</p>
+            <p id="err-studentTempPassword" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
+
+          <button type="submit" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Add student</button>
+        </form>
+      </div>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full border-collapse">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
+              <th class="px-4 py-2.5">Name</th>
+              <th class="px-4 py-2.5">Section</th>
+              <th class="px-4 py-2.5">Added</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody" class="text-sm"></tbody>
+        </table></div>
+        <div id="studentsEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No students registered yet.</div>
+      </div>
+    </section>
+
+    <!-- MY SUBJECTS (subjects assigned to me — Dept Head/Dean can also teach) -->
+    <section id="view-mysubjects" class="hidden">
+      <h1 class="font-display text-2xl font-bold">My Subjects</h1>
+      <p class="text-[#6B7060] text-sm mt-1 mb-6">Subjects assigned specifically to you as a teaching faculty member.</p>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full border-collapse">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
+              <th class="px-4 py-2.5">Subject</th>
+              <th class="px-4 py-2.5">Unit</th>
+              <th class="px-4 py-2.5">Section</th>
+              <th class="px-4 py-2.5">Schedule</th>
+              <th class="px-4 py-2.5">Department</th>
+            </tr>
+          </thead>
+          <tbody id="mySubjectsBody" class="text-sm"></tbody>
+        </table></div>
+        <div id="mySubjectsEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No subjects assigned to you yet.</div>
+      </div>
+    </section>
+
+    <!-- MANAGE ACCOUNTS (Dean only — delete staff accounts; never Super Admin) -->
+    <section id="view-manageaccounts" class="hidden">
+      <h1 class="font-display text-2xl font-bold">Manage Accounts</h1>
+      <p id="manageAccountsScopeNote" class="text-[#6B7060] text-sm mt-1 mb-6">—</p>
+
+      <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full border-collapse">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
+              <th class="px-4 py-2.5">Name</th>
+              <th class="px-4 py-2.5">Designation</th>
+              <th class="px-4 py-2.5">Department</th>
+              <th class="px-4 py-2.5">Username</th>
+              <th class="px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody id="manageAccountsBody" class="text-sm"></tbody>
+        </table></div>
+        <div id="manageAccountsEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No accounts on file yet.</div>
+      </div>
+    </section>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+      <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+<script src="session.js"></script>
+<script src="depthead.js"></script>
+</body>
+</html>
