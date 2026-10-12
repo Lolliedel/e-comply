@@ -1516,12 +1516,12 @@
       overlay.innerHTML = `
         <div class="bg-white border border-[#E3DFC8] rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl relative text-[#1B2116] flex flex-col items-center max-h-[95vh] overflow-y-auto">
           
-          <!-- Top Row: Close + Sample School IDs Button -->
+          <!-- Top Row: Title + Flip & Close Buttons -->
           <div class="w-full flex items-center justify-between mb-3 pb-2 border-b border-[#EFEBDB]">
-            <button type="button" id="qrBrowseSampleIdsBtn" class="text-[11px] font-bold text-[#14432A] hover:text-[#1B5636] bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs">
-              <img src="ICON/ESSU.png" class="w-3.5 h-3.5 object-contain" alt="">
-              <span>Sample IDs (All Entities)</span>
-            </button>
+            <div class="flex items-center gap-1.5 text-xs font-bold text-[#14432A]">
+              <img src="ICON/ESSU.png" class="w-4 h-4 object-contain" alt="">
+              <span>Official Digital ID Card</span>
+            </div>
             <div class="flex items-center gap-2">
               <button type="button" id="qrFlipToggleBtn" class="text-[11px] font-semibold text-[#8A6A0C] hover:underline flex items-center gap-1">
                 <img src="ICON/sync.svg" class="w-3 h-3" alt=""> <span id="qrFlipToggleLabel">Flip to Back</span>
@@ -1555,7 +1555,6 @@
       const printBtn = document.getElementById("qrPrintIdBtn");
       const flipBtn = document.getElementById("qrFlipToggleBtn");
       const flipLabel = document.getElementById("qrFlipToggleLabel");
-      const browseSamplesBtn = document.getElementById("qrBrowseSampleIdsBtn");
       const stage = document.getElementById("essuPrintableIdCardStage");
 
       const updateView = () => {
@@ -1566,18 +1565,6 @@
       flipBtn.onclick = () => {
         showBack = !showBack;
         updateView();
-      };
-
-      browseSamplesBtn.onclick = () => {
-        const userRole = (user.designation || "").toLowerCase();
-        let entityKey = "student";
-        if (userRole.includes("super admin")) entityKey = "superadmin";
-        else if (userRole.includes("dean")) entityKey = "dean";
-        else if (userRole.includes("department head")) entityKey = "depthead";
-        else if (userRole.includes("campus admin")) entityKey = "campusadmin";
-        else if (userRole.includes("quality")) entityKey = "qa";
-        else if (userRole.includes("faculty")) entityKey = "faculty";
-        this.openSampleSchoolIdModal(entityKey);
       };
 
       closeBtn.onclick = () => {

@@ -969,11 +969,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  $("studentSampleIdsBtn")?.addEventListener("click", () => {
-    if (typeof QRClient !== "undefined") {
-      QRClient.openSampleSchoolIdModal("student");
-    }
-  });
-
   enterApp();
 });

@@ -120,7 +120,10 @@ function getFormattedFullName(u) {
 }
 
 window.openSampleSchoolIds = function(role) {
-  if (typeof QRClient !== "undefined" && typeof QRClient.openSampleSchoolIdModal === "function") {
+  const session = typeof getPortalSession === "function" ? getPortalSession() : null;
+  if (session && typeof QRClient !== "undefined" && typeof QRClient.openIdCardModal === "function") {
+    QRClient.openIdCardModal({ user: session });
+  } else if (typeof QRClient !== "undefined" && typeof QRClient.openSampleSchoolIdModal === "function") {
     QRClient.openSampleSchoolIdModal(role);
   } else {
     console.warn("QRClient library not loaded yet.");

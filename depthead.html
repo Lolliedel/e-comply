@@ -68,7 +68,6 @@
 
     <div class="mt-auto px-2 pt-3 border-t border-[#245C3B]">
       <div id="sidebarName" class="text-xs text-[#D9A62C] font-semibold mb-2">—</div>
-      <button onclick="if(typeof openSampleSchoolIds==='function')openSampleSchoolIds(profile.designation==='Dean'?'dean':'depthead');" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5 mb-1.5"><img src="ICON/qr.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sample School IDs</button>
       <a href="profile.html" class="text-xs text-[#9FC2AC] hover:text-white transition block mb-1.5">My Profile</a>
       <button onclick="portalLogout()" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5"><img src="ICON/user.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sign out</button>
     </div>
@@ -403,12 +402,9 @@
                 <img src="ICON/qr.svg" class="w-12 h-12 opacity-30" alt="">
               </div>
               <p class="text-[11px] text-[#6B7060] mb-2.5">QR Code is auto-generated for this student's identity and can be scanned from mobile or printed School ID card.</p>
-              <div class="flex gap-2 justify-center">
+              <div class="flex justify-center">
                 <button type="button" id="dhStudentPreviewIdCardBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1">
                   <img src="ICON/print.svg" class="w-3.5 h-3.5 invert" alt=""> Preview School ID
-                </button>
-                <button type="button" id="dhStudentSampleIdsBtn" class="bg-white hover:bg-[#FAF7EF] border border-[#DEDACE] text-[#14432A] text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
-                  All Sample IDs
                 </button>
               </div>
             </div>

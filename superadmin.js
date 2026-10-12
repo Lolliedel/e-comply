@@ -3014,19 +3014,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  $("saSampleIdsBtn")?.addEventListener("click", () => {
-    if (typeof QRClient !== "undefined") {
-      const desig = $("designationSelect")?.value || "superadmin";
-      let key = "superadmin";
-      if (/dean/i.test(desig)) key = "dean";
-      else if (/head/i.test(desig)) key = "depthead";
-      else if (/faculty/i.test(desig)) key = "faculty";
-      else if (/qa|quality/i.test(desig)) key = "qa";
-      else if (/campus/i.test(desig)) key = "campusadmin";
-      QRClient.openSampleSchoolIdModal(key);
-    }
-  });
-
   $("userForm")?.addEventListener("submit", handleCreateUser);
   $("cancelEditBtn")?.addEventListener("click", () => { exitEditMode(); showView("reports"); });
   initSignaturePad();

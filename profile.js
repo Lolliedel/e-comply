@@ -32,6 +32,9 @@ function renderAvatarPreview() {
   } else {
     el.textContent = initials($("firstName").value, $("lastName").value) || "—";
   }
+  if (typeof renderEmbeddedIdCard === "function") {
+    renderEmbeddedIdCard();
+  }
 }
 
 // ── Photo upload (center-cropped to a square, downsized before storing) ──
@@ -246,6 +249,25 @@ function handleRemoveFingerprint() {
   showToast("Biometric removed. Click Save Changes to apply.");
 }
 
+let isProfileIdBack = false;
+
+function renderEmbeddedIdCard() {
+  const stage = $("profileEmbeddedIdCardStage");
+  if (!stage || typeof QRClient === "undefined") return;
+  const userData = {
+    ...record,
+    ...profile,
+    first_name: $("firstName")?.value?.trim() || record?.first_name || profile?.first_name,
+    last_name: $("lastName")?.value?.trim() || record?.last_name || profile?.last_name,
+    middle_initial: $("middleInitial")?.value?.trim() || record?.middle_initial || profile?.middle_initial,
+    profile_picture: profilePictureDataUrl || record?.profile_picture || profile?.profile_picture || null
+  };
+  stage.innerHTML = QRClient.renderIdCardHtml(userData, { isBack: isProfileIdBack });
+  if ($("profileFlipLabel")) {
+    $("profileFlipLabel").textContent = isProfileIdBack ? "Flip to Front View" : "Flip to Back (QR Code)";
+  }
+}
+
 function renderForm() {
   const isStudent = profile.role === "student";
 
@@ -315,14 +337,8 @@ function renderForm() {
   profilePictureDataUrl = record.profile_picture || null;
   renderAvatarPreview();
 
-  // Render Official QR Code
-  if (typeof QRClient !== "undefined") {
-    const qrContainer = $("profileQrCodeContainer");
-    if (qrContainer) {
-      const qrPayload = QRClient.getUserQrPayload({ ...record, ...profile });
-      qrContainer.innerHTML = QRClient.generateSvg(qrPayload, { size: 70, margin: 1 });
-    }
-  }
+  // Render Official Embedded ID Card
+  renderEmbeddedIdCard();
 }
 
 // ── Save ────────────────────────────────────────────────────────────────
@@ -455,10 +471,57 @@ document.addEventListener("DOMContentLoaded", () => {
     a.remove();
   });
 
-  $("profileViewIdCardBtn")?.addEventListener("click", () => {
-    if (typeof QRClient !== "undefined") {
-      QRClient.openIdCardModal({ user: { ...record, ...profile } });
+  $("profileFlipIdCardBtn")?.addEventListener("click", () => {
+    isProfileIdBack = !isProfileIdBack;
+    renderEmbeddedIdCard();
+  });
+
+  $("profilePrintIdCardBtn")?.addEventListener("click", () => {
+    if (typeof QRClient === "undefined") return;
+    const userData = {
+      ...record,
+      ...profile,
+      first_name: $("firstName")?.value?.trim() || record?.first_name || profile?.first_name,
+      last_name: $("lastName")?.value?.trim() || record?.last_name || profile?.last_name,
+      middle_initial: $("middleInitial")?.value?.trim() || record?.middle_initial || profile?.middle_initial,
+      profile_picture: profilePictureDataUrl || record?.profile_picture || profile?.profile_picture || null
+    };
+    const frontHtml = QRClient.renderIdCardHtml(userData, { isBack: false });
+    const backHtml = QRClient.renderIdCardHtml(userData, { isBack: true });
+    const fullName = `${userData.last_name || ""}, ${userData.first_name || ""}`.trim();
+    const printWin = window.open("", "_blank", "width=700,height=800");
+    if (!printWin) {
+      showToast("Please allow popups to print your ID card.", true);
+      return;
     }
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ESSU Official Digital ID - ${fullName}</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style>
+          body { font-family: system-ui, sans-serif; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+          @media print {
+            body { padding: 0; min-height: auto; }
+            .no-print { display: none !important; }
+            .page-break { page-break-after: always; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print mb-4 flex gap-3">
+          <button onclick="window.print()" style="background:#14432A;color:#fff;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;">Print Official ID Card</button>
+          <button onclick="window.close()" style="background:#FAF7EF;color:#52555C;border:1px solid #DEDACE;padding:8px 16px;border-radius:8px;cursor:pointer;">Close</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:760px;">
+          <div style="width:340px;">${frontHtml}</div>
+          <div style="width:340px;">${backHtml}</div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
   });
 
   $("profileTestQrScannerBtn")?.addEventListener("click", () => {

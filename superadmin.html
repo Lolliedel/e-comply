@@ -63,11 +63,6 @@
       <img src="ICON/report.svg" alt="" class="w-4 h-4 shrink-0">
       <span>Reports</span>
     </button>
-    <button type="button" onclick="if(typeof QRClient!=='undefined')QRClient.openSampleSchoolIdModal('superadmin')"
-      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <img src="ICON/qr.svg" alt="" class="w-4 h-4 shrink-0">
-      <span>Sample School IDs</span>
-    </button>
 
     <div class="mt-auto px-2 pt-3 border-t border-[#245C3B]">
       <div id="sidebarName" class="text-xs text-[#D9A62C] font-semibold mb-2">Super Admin</div>
@@ -727,12 +722,9 @@
                   <img src="ICON/qr.svg" class="w-12 h-12 opacity-30" alt="">
                 </div>
                 <p class="text-[11px] text-[#6B7060] mb-2.5">Official scannable QR Code encodes user identity credentials for biometric-parity sign-in and document signing.</p>
-                <div class="flex gap-2 justify-center">
+                <div class="flex justify-center">
                   <button type="button" id="saPreviewIdCardBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1">
                     <img src="ICON/print.svg" class="w-3.5 h-3.5 invert" alt=""> Preview School ID
-                  </button>
-                  <button type="button" id="saSampleIdsBtn" class="bg-white hover:bg-[#FAF7EF] border border-[#DEDACE] text-[#14432A] text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
-                    All Sample IDs
                   </button>
                 </div>
               </div>

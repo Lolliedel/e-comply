@@ -1611,12 +1611,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    $("dhStudentSampleIdsBtn")?.addEventListener("click", () => {
-      if (typeof QRClient !== "undefined") {
-        QRClient.openSampleSchoolIdModal("student");
-      }
-    });
-
     $("studentSectionSelect")?.addEventListener("change", (e) => {
       const secId = e.target.value;
       if (!secId) return;

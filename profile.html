@@ -31,9 +31,6 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <button type="button" onclick="if(typeof QRClient!=='undefined')QRClient.openSampleSchoolIdModal(profile?.designation?.toLowerCase()?.replace(/\s+/g,'')||'student')" class="text-xs font-semibold text-[#14432A] bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-2.5 py-1 rounded-md transition flex items-center gap-1 shadow-2xs">
-        <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> Sample School IDs
-      </button>
       <a id="backLink" href="#" class="text-sm text-[#14432A] font-semibold hover:underline">← Back to Dashboard</a>
       <button onclick="portalLogout()" class="text-xs text-[#8A6A0C] hover:underline flex items-center gap-1"><img src="ICON/user.svg" class="w-3.5 h-3.5 inline" alt=""> Sign out</button>
     </div>
@@ -129,44 +126,41 @@
       </div>
     </div>
 
-    <!-- DIGITAL UNIVERSITY ID & QR CREDENTIAL -->
-    <div class="pt-4 border-t border-[#EFEBDB] mb-5">
-      <div class="flex items-center justify-between mb-2">
-        <label class="block text-xs font-semibold text-[#52555C] uppercase tracking-wide flex items-center gap-1.5">
-          <img src="ICON/qr.svg" class="w-3.5 h-3.5 text-[#14432A]" alt="">
-          <span>Digital University ID & QR Credential</span>
-        </label>
+    <!-- OFFICIAL UNIVERSITY DIGITAL ID CARD SECTION -->
+    <div class="pt-5 border-t border-[#EFEBDB] mb-5">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+        <div>
+          <label class="block text-xs font-bold text-[#14432A] uppercase tracking-wide flex items-center gap-1.5">
+            <img src="ICON/qr.svg" class="w-4 h-4 text-[#14432A]" alt="">
+            <span>Official University Digital ID Card</span>
+          </label>
+          <p class="text-[11px] text-[#6B7060] mt-0.5">Your official institutional identification credential and scannable QR verification pass.</p>
+        </div>
         <div class="flex items-center gap-2">
-          <button type="button" id="profileDownloadQrBtn" class="text-xs text-[#14432A] font-semibold hover:bg-[#FAF7EF] border border-[#DEDACE] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-2xs">
-            <img src="ICON/qr.svg" class="w-3 h-3"> Download QR
+          <button type="button" id="profileFlipIdCardBtn" class="text-xs font-semibold text-[#14432A] bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs">
+            <img src="ICON/sync.svg" class="w-3.5 h-3.5" alt=""> <span id="profileFlipLabel">Flip to Back (QR Code)</span>
           </button>
-          <button type="button" id="profileViewIdCardBtn" class="text-xs bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs">
-            <img src="ICON/print.svg" class="w-3 h-3 invert"> View / Print ID Card
+          <button type="button" id="profilePrintIdCardBtn" class="text-xs bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-xs">
+            <img src="ICON/print.svg" class="w-3.5 h-3.5 invert" alt=""> Print Card
           </button>
         </div>
       </div>
 
-      <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div id="profileQrCodeContainer" class="w-20 h-20 bg-white border border-[#DEDACE] rounded-xl p-1.5 shadow-2xs shrink-0 flex items-center justify-center">
-            <!-- QR Code generated here -->
-          </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap mb-0.5">
-              <span class="text-xs font-bold text-[#14432A]">Official Scannable QR ID</span>
-              <span id="profileQrIdBadge" class="font-mono text-[11px] font-bold text-[#8A6A0C] bg-[#FBF3D9] px-2 py-0.5 rounded border border-[#E3DFC8]">ID: —</span>
-            </div>
-            <p class="text-[11px] text-[#6B7060] mt-0.5 max-w-sm">Use this QR code as your official digital credential for attendance and document signing if the Live20R biometric scanner is unavailable.</p>
-            <div class="mt-1 flex items-center gap-2">
-              <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1F6F4A] bg-[#E1EEE6] px-2 py-0.5 rounded-full">
-                ✓ Active ID Credential
-              </span>
-            </div>
-          </div>
+      <!-- Live ID Card Render Stage -->
+      <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-2xl p-4 sm:p-6 flex flex-col items-center shadow-xs">
+        <div id="profileEmbeddedIdCardStage" class="w-full max-w-[340px] transition-all duration-300">
+          <div class="text-center text-xs text-[#8A8D93] py-8">Rendering your official ID…</div>
         </div>
-        <button type="button" id="profileTestQrScannerBtn" class="text-xs text-[#8A6A0C] font-semibold hover:underline flex items-center gap-1 self-end sm:self-center">
-          <img src="ICON/scanner.svg" class="w-3.5 h-3.5"> Test Camera Scanner
-        </button>
+
+        <!-- ID Card Controls & Scanner -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3.5 border-t border-[#EFEBDB] w-full max-w-[340px]">
+          <button type="button" id="profileDownloadQrBtn" class="text-xs text-[#14432A] font-semibold bg-white hover:bg-[#FAF7EF] border border-[#DEDACE] px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs">
+            <img src="ICON/qr.svg" class="w-3.5 h-3.5"> Download QR PNG
+          </button>
+          <button type="button" id="profileTestQrScannerBtn" class="text-xs text-[#8A6A0C] font-semibold hover:underline flex items-center gap-1.5">
+            <img src="ICON/scanner.svg" class="w-3.5 h-3.5"> Test Camera Scanner
+          </button>
+        </div>
       </div>
     </div>
 
