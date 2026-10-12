@@ -13,6 +13,8 @@ const PORTAL_SESSION_KEY = "portal_session";
 // Where each designation lands after signing in / when a guard redirects them.
 const PORTAL_ROUTES = {
   "Super Admin": "superadmin.html",
+  "Campus Administrator": "campusadmin.html",
+  "Quality Assurance": "qa.html",
   "Department Head": "depthead.html",
   "Dean": "dean.html", // same underlying app as depthead.html (shares depthead.js), own landing page
   "Faculty": "faculty.html",
@@ -107,3 +109,20 @@ function redirectToLogin() {
   try { sessionStorage.setItem(GUARD_KEY, JSON.stringify(hits)); } catch { /* storage unavailable — nothing more we can do */ }
   window.location.href = "index.html";
 }
+
+function getFormattedFullName(u) {
+  if (!u) return "";
+  const first = (u.first_name || u.firstName || "").trim();
+  const rawMi = u.middle_initial || u.middleInitial || u.mi || "";
+  const mi = rawMi ? rawMi.trim().toUpperCase().replace(/\.$/, "") + "." : "";
+  const last = (u.last_name || u.lastName || "").trim();
+  return [first, mi, last].filter(Boolean).join(" ");
+}
+
+window.openSampleSchoolIds = function(role) {
+  if (typeof QRClient !== "undefined" && typeof QRClient.openSampleSchoolIdModal === "function") {
+    QRClient.openSampleSchoolIdModal(role);
+  } else {
+    console.warn("QRClient library not loaded yet.");
+  }
+};

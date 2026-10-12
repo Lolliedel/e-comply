@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Department Head Portal</title>
+<title>ESSU E-Comply — Department Head Portal</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -12,69 +13,79 @@
   .font-display { font-family: 'Fraunces', serif; }
   .font-mono { font-family: 'IBM Plex Mono', monospace; }
   .nav-btn.active { background:#D9A62C; color:#14432A; font-weight:600; }
+  .nav-btn img { filter: brightness(0) invert(1); opacity: 0.85; }
+  .nav-btn.active img { filter: brightness(0); opacity: 1; }
   .tab-btn.active { background:#14432A; color:#fff; }
-  .seal { background: repeating-linear-gradient(135deg, #D9A62C 0 3px, transparent 3px 8px); }
 </style>
 </head>
-<body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
+<body class="bg-[#FAF7EF] text-[#1B2116] p-2 sm:p-4">
 
 <!-- ══════════════════════════ APP SHELL ══════════════════════════ -->
-<div id="appShell" class="hidden flex flex-col md:flex-row md:min-h-[680px] rounded-xl overflow-hidden border border-[#E3DFC8] max-w-6xl mx-auto shadow-sm">
+<div id="appShell" class="hidden flex flex-col md:flex-row md:min-h-[calc(100vh-2rem)] rounded-xl overflow-hidden border border-[#E3DFC8] w-full max-w-[1600px] mx-auto shadow-sm bg-white">
 
   <!-- SIDEBAR -->
-  <aside class="w-full md:w-64 bg-[#14432A] p-4 flex flex-col gap-1 shrink-0">
-    <div class="px-2 pb-5 flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full seal shrink-0"></div>
+  <aside class="w-full md:w-64 bg-[#14432A] p-4 flex flex-col gap-1 shrink-0" role="navigation" aria-label="Main Navigation">
+    <div class="px-2 pb-5 flex items-center gap-3 border-b border-[#245C3B] mb-2">
+      <div class="w-11 h-11 rounded-full bg-white p-1 shadow-md border-2 border-[#D9A62C] flex items-center justify-center shrink-0">
+        <img src="ICON/ESSU.png" alt="ESSU Logo" class="w-full h-full object-contain">
+      </div>
       <div>
-        <div class="font-display text-lg font-bold text-white leading-tight">Department Head</div>
-        <div id="sidebarDept" class="text-xs text-[#9FC2AC] mt-0.5">—</div>
+        <div class="font-display text-base font-bold text-white leading-tight">ESSU E-Comply</div>
+        <div id="sidebarDept" class="text-[11px] text-[#D9A62C] font-semibold tracking-wide uppercase mt-0.5">—</div>
       </div>
     </div>
 
     <button data-view="home" onclick="showView('home')"
       class="nav-btn active flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>⌂</span> Home
+      <img src="ICON/home.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Home</span>
     </button>
     <button data-view="forms" onclick="showView('forms')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>▤</span> Forms
+      <img src="ICON/form.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Forms</span>
     </button>
     <button data-view="faculty" onclick="showView('faculty')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>🎓</span> Faculty
+      <img src="ICON/faculty.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Faculty Workload</span>
     </button>
     <button data-view="students" onclick="showView('students')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>👥</span> Students
+      <img src="ICON/student.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Students List</span>
     </button>
     <button data-view="mysubjects" onclick="showView('mysubjects')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>📘</span> My Subjects
+      <img src="ICON/subject.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>My Subjects</span>
     </button>
     <button id="manageAccountsNavBtn" data-view="manageaccounts" onclick="showView('manageaccounts')"
       class="hidden nav-btn items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>🗂</span> Manage Accounts
+      <img src="ICON/manage_account.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Manage Accounts</span>
     </button>
 
     <div class="mt-auto px-2 pt-3 border-t border-[#245C3B]">
       <div id="sidebarName" class="text-xs text-[#D9A62C] font-semibold mb-2">—</div>
+      <button onclick="if(typeof openSampleSchoolIds==='function')openSampleSchoolIds(profile.designation==='Dean'?'dean':'depthead');" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5 mb-1.5"><img src="ICON/qr.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sample School IDs</button>
       <a href="profile.html" class="text-xs text-[#9FC2AC] hover:text-white transition block mb-1.5">My Profile</a>
-      <button onclick="logout()" class="text-xs text-[#9FC2AC] hover:text-white transition">↩ Sign out</button>
+      <button onclick="portalLogout()" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5"><img src="ICON/user.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sign out</button>
     </div>
   </aside>
 
   <!-- MAIN -->
-  <main class="flex-1 p-4 sm:p-8 overflow-y-auto relative">
+  <main class="flex-1 p-4 sm:p-8 overflow-y-auto relative" role="main" aria-label="Department Head Workspace">
 
     <!-- STARTUP ERROR (shown by depthead.js if loading the portal fails) -->
     <div id="startupError" class="hidden bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] text-sm rounded-lg px-4 py-3 mb-6">
-      <strong>Couldn't fully load this portal.</strong>
-      <span id="startupErrorDetail"></span>
+      <strong id="startupErrorTitle">Portal startup error</strong>
+      <p id="startupErrorDetail" class="mt-1 text-xs"></p>
     </div>
 
     <!-- HOME -->
     <section id="view-home">
-      <h1 class="font-display text-2xl font-bold">Overview</h1>
+      <h1 id="homeHeading" class="font-display text-2xl font-bold">Overview</h1>
       <p class="text-[#6B7060] text-sm mt-1 mb-6">Snapshot of your department's faculty, students, and course requirements.</p>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-7">
@@ -147,72 +158,132 @@
         <p class="text-xs text-[#6B7060] mb-4">Maintain the section list for this department — add or remove one below, and it appears immediately in the subject form.</p>
         <div id="sectionChips" class="mb-4"></div>
         <div class="flex gap-2">
-          <input id="newSectionInput" placeholder="e.g. BSIT 2A" class="flex-1 max-w-xs border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
-          <button id="addSectionBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+          <input id="newSectionInput" placeholder="e.g. BSIT 2A" class="flex-1 min-w-0 max-w-xs border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
+          <button id="addSectionBtn" class="shrink-0 bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Add</button>
         </div>
       </div>
 
-      <div class="flex flex-col lg:flex-row gap-7 items-start mb-8">
-        <form id="courseForm" class="flex-1 max-w-md bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6">
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Subject/Course Number</label>
-            <input id="courseNumber" placeholder="IT 101" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
-            <p id="err-courseNumber" class="text-xs text-[#B3432B] mt-1 hidden"></p>
-          </div>
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Course Description</label>
-            <input id="courseDescription" placeholder="Introduction to Computing" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
-            <p id="err-courseDescription" class="text-xs text-[#B3432B] mt-1 hidden"></p>
-          </div>
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Unit</label>
-            <input id="courseUnit" type="number" step="0.5" min="0" placeholder="3" class="w-32 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
-          </div>
+      <!-- INCREMENTAL SUBJECT TABS -->
+      <div id="subjectTabs" class="flex border-b border-[#E3DFC8] mb-6 overflow-x-auto gap-2">
+        <button type="button" data-subject-tab="offer" class="dept-subject-tab-btn active px-4 py-2.5 text-sm font-semibold border-b-2 border-[#14432A] text-[#14432A] bg-[#14432A]/10 rounded-t-lg transition flex items-center gap-2">
+          <img src="ICON/pin.svg" class="w-4 h-4"> Offer Subject to Section
+        </button>
+        <button type="button" data-subject-tab="pool" class="dept-subject-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-[#6B7060] hover:text-[#14432A] transition flex items-center gap-2">
+          <img src="ICON/pool.svg" class="w-4 h-4"> College Subject Pool
+        </button>
+      </div>
 
-          <div class="mb-4">
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="block text-xs font-semibold text-[#52555C]">Section</label>
-              <button type="button" id="courseSectionQuickAddBtn" class="text-xs text-[#8A6A0C] hover:underline">+ add new</button>
+      <!-- TAB 1: OFFER / ASSIGN SUBJECT -->
+      <div id="deptSubjectTab-offer">
+        <div class="flex flex-col lg:flex-row gap-7 items-start mb-8">
+          <form id="courseForm" class="flex-1 max-w-md bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6">
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Select from Subject Pool <span class="text-[#8A8D93] font-normal">(Catalog)</span></label>
+              <select id="coursePoolSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C] bg-[#FCFBF6]">
+                <option value="">Choose a subject or enter details below…</option>
+              </select>
             </div>
-            <select id="courseSectionSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
-              <option value="">Select…</option>
-            </select>
-            <div id="courseSectionQuickAddRow" class="hidden mt-2">
-              <div class="flex gap-2">
-                <input id="newCourseSectionQuickInput" placeholder="e.g. BSIT 2A" class="flex-1 border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
-                <button type="button" id="addCourseSectionQuickBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Subject/Course Number</label>
+              <input id="courseNumber" placeholder="IT 101" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <p id="err-courseNumber" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+            </div>
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Course Description</label>
+              <input id="courseDescription" placeholder="Introduction to Computing" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <p id="err-courseDescription" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+            </div>
+            <div class="mb-4">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Unit</label>
+              <input id="courseUnit" type="number" step="0.5" min="0" placeholder="3" class="w-32 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            </div>
+
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-semibold text-[#52555C]">Section</label>
+                <button type="button" id="courseSectionQuickAddBtn" class="text-xs text-[#8A6A0C] hover:underline">+ add new</button>
+              </div>
+              <select id="courseSectionSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+                <option value="">Select…</option>
+              </select>
+              <div id="courseSectionQuickAddRow" class="hidden mt-2">
+                <div class="flex gap-2">
+                  <input id="newCourseSectionQuickInput" placeholder="e.g. BSIT 2A" class="flex-1 border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]">
+                  <button type="button" id="addCourseSectionQuickBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 rounded-lg transition">Add</button>
+                </div>
+              </div>
+              <p id="err-courseSectionSelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+            </div>
+
+            <div class="mb-1">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Schedule — Days</label>
+            </div>
+            <div id="dayTogglesContainer" class="flex flex-wrap gap-1.5 mb-3"></div>
+            <div class="flex gap-3 mb-4">
+              <div class="flex-1">
+                <label class="block text-xs text-[#6B7060] mb-1">Start time</label>
+                <input id="courseStartTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              </div>
+              <div class="flex-1">
+                <label class="block text-xs text-[#6B7060] mb-1">End time</label>
+                <input id="courseEndTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
               </div>
             </div>
-            <p id="err-courseSectionSelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
-          </div>
 
-          <div class="mb-1">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Schedule — Days</label>
-          </div>
-          <div id="dayTogglesContainer" class="flex flex-wrap gap-1.5 mb-3"></div>
-          <div class="flex gap-3 mb-4">
-            <div class="flex-1">
-              <label class="block text-xs text-[#6B7060] mb-1">Start time</label>
-              <input id="courseStartTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+            <div class="mb-5">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Assign to</label>
+              <select id="courseFacultySelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+                <option value="">Select…</option>
+              </select>
+              <p id="err-courseFacultySelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
             </div>
-            <div class="flex-1">
-              <label class="block text-xs text-[#6B7060] mb-1">End time</label>
-              <input id="courseEndTime" type="time" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+
+            <div id="conflictWarning" class="hidden bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] text-xs rounded-lg px-3 py-2.5 mb-4"></div>
+
+            <button type="submit" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Assign subject</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 2: COLLEGE SUBJECT POOL -->
+      <div id="deptSubjectTab-pool" class="hidden mb-8">
+        <div class="bg-white border border-[#E3DFC8] rounded-xl p-5 mb-6">
+          <div class="mb-4">
+            <h2 class="font-display text-base font-semibold">College Subject Catalog</h2>
+            <p class="text-xs text-[#6B7060] mt-0.5">Master subjects available in this college. Universal General Education subjects are created and managed by Super Admin.</p>
+          </div>
+
+          <form id="deptPoolSubjectForm" class="flex flex-col sm:flex-row gap-3 mb-6 bg-[#FCFBF6] p-4 border border-[#EFEBDB] rounded-lg items-end">
+            <div class="flex-1 min-w-[120px]">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1">Course No.</label>
+              <input id="deptPoolCourseNumber" placeholder="e.g. IT 101" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]" required>
             </div>
+            <div class="flex-2 min-w-[200px] flex-grow">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1">Description / Title</label>
+              <input id="deptPoolCourseDescription" placeholder="e.g. Introduction to Computing" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]" required>
+            </div>
+            <div class="w-24">
+              <label class="block text-xs font-semibold text-[#52555C] mb-1">Units</label>
+              <input id="deptPoolCourseUnit" type="number" step="0.5" min="0" placeholder="3" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#D9A62C]" required>
+            </div>
+            <button type="submit" id="addDeptPoolSubjectBtn" class="shrink-0 bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 py-2 rounded-lg transition">+ Add to Pool</button>
+          </form>
+
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="bg-[#F6F4EB] text-left border-b border-[#E3DFC8]">
+                  <th class="px-4 py-2.5 font-semibold text-[#14432A]">Course No.</th>
+                  <th class="px-4 py-2.5 font-semibold text-[#14432A]">Description</th>
+                  <th class="px-4 py-2.5 font-semibold text-[#14432A]">Units</th>
+                  <th class="px-4 py-2.5 font-semibold text-[#14432A]">Type</th>
+                  <th class="px-4 py-2.5 font-semibold text-[#14432A] text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="deptSubjectPoolBody" class="divide-y divide-[#F0EDDE]"></tbody>
+            </table>
           </div>
-
-          <div class="mb-5">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Assign to</label>
-            <select id="courseFacultySelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
-              <option value="">Select…</option>
-            </select>
-            <p id="err-courseFacultySelect" class="text-xs text-[#B3432B] mt-1 hidden"></p>
-          </div>
-
-          <div id="conflictWarning" class="hidden bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] text-xs rounded-lg px-3 py-2.5 mb-4"></div>
-
-          <button type="submit" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Assign subject</button>
-        </form>
+        </div>
       </div>
 
       <div class="bg-white border border-[#E3DFC8] rounded-xl overflow-hidden">
@@ -252,6 +323,13 @@
               <p id="err-studentFirstName" class="text-xs text-[#B3432B] mt-1 hidden"></p>
             </div>
           </div>
+          <div class="mb-3">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Academic Course / Degree Program</label>
+            <select id="studentCourseSelect" class="w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]">
+              <option value="">— Select Degree Program (Optional) —</option>
+            </select>
+            <p id="err-studentCourse" class="text-xs text-[#B3432B] mt-1 hidden"></p>
+          </div>
           <div class="mb-5">
             <div class="flex items-center justify-between mb-1.5">
               <label class="block text-xs font-semibold text-[#52555C]">Section</label>
@@ -289,12 +367,51 @@
           </div>
 
           <div class="mb-5">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Biometric</label>
-            <button type="button" id="studentFingerprintBtn"
-              class="w-full flex items-center justify-center gap-2 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#14432A] hover:bg-[#FAF7EF] transition">
-              <span id="studentFingerprintIcon">🔒</span> <span id="studentFingerprintLabel">Register Fingerprint</span>
-            </button>
-            <p id="studentFingerprintStatus" class="text-xs text-[#6B7060] mt-1.5">Not yet registered</p>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Verification Credential (Fingerprint or QR Code)</label>
+            
+            <!-- Dual Option Switcher -->
+            <div class="flex rounded-lg bg-[#FAF7EF] p-1 border border-[#DEDACE] mb-2.5">
+              <button type="button" id="dhTabBioSelectBtn" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-[#14432A] text-white shadow-2xs flex items-center justify-center gap-1.5 transition">
+                <img src="ICON/biometric.svg" class="w-3.5 h-3.5 invert" alt=""> Live20R Fingerprint
+              </button>
+              <button type="button" id="dhTabQrSelectBtn" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-[#14432A] hover:bg-white/60 transition flex items-center justify-center gap-1.5">
+                <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> QR Code & ID Card
+              </button>
+            </div>
+
+            <!-- Panel 1: Live20R Fingerprint -->
+            <div id="dhStudentBioPanel">
+              <button type="button" id="studentFingerprintBtn"
+                class="w-full flex items-center justify-center gap-2 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#14432A] hover:bg-[#FAF7EF] transition">
+                <img id="studentFingerprintIcon" src="ICON/biometric.svg" class="w-4 h-4 object-contain" alt=""> <span id="studentFingerprintLabel">Register Fingerprint</span>
+              </button>
+              <div id="studentFingerprintPreviewRow" class="hidden mt-2 p-2 bg-[#FCFBF6] border border-[#EFEBDB] rounded-lg flex items-center gap-3">
+                <img id="studentFingerprintPreviewImg" class="w-10 h-12 object-contain rounded border border-[#DEDACE] bg-white" alt="Live20R scan" />
+                <div class="flex-1 text-xs">
+                  <div class="font-semibold text-[#14432A]">ZKTeco Live20R Enrolled</div>
+                  <div class="text-[#6B7060] text-[11px]">500 DPI Template captured</div>
+                </div>
+                <button type="button" id="studentClearFingerprintBtn" class="text-xs text-[#B3432B] hover:underline">Clear</button>
+              </div>
+              <p id="studentFingerprintStatus" class="text-xs text-[#6B7060] mt-1.5">Not yet registered</p>
+            </div>
+
+            <!-- Panel 2: QR Code & School ID -->
+            <div id="dhStudentQrPanel" class="hidden p-3 bg-[#FCFBF6] border border-[#EFEBDB] rounded-xl text-center">
+              <div class="text-[11px] font-semibold text-[#8A6A0C] uppercase tracking-wide mb-2">Student Digital ID & QR Code</div>
+              <div id="dhStudentRegQrContainer" class="w-24 h-24 bg-white border border-[#DEDACE] rounded-xl mx-auto p-1.5 flex items-center justify-center mb-2 shadow-2xs">
+                <img src="ICON/qr.svg" class="w-12 h-12 opacity-30" alt="">
+              </div>
+              <p class="text-[11px] text-[#6B7060] mb-2.5">QR Code is auto-generated for this student's identity and can be scanned from mobile or printed School ID card.</p>
+              <div class="flex gap-2 justify-center">
+                <button type="button" id="dhStudentPreviewIdCardBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1">
+                  <img src="ICON/print.svg" class="w-3.5 h-3.5 invert" alt=""> Preview School ID
+                </button>
+                <button type="button" id="dhStudentSampleIdsBtn" class="bg-white hover:bg-[#FAF7EF] border border-[#DEDACE] text-[#14432A] text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                  All Sample IDs
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="border-t border-dashed border-[#E3DFC8] pt-4 mb-1">
@@ -326,6 +443,7 @@
           <thead>
             <tr class="text-left text-[11px] uppercase tracking-wide text-[#8A8D93] border-b border-[#E3DFC8]">
               <th class="px-4 py-2.5">Name</th>
+              <th class="px-4 py-2.5">Degree Program</th>
               <th class="px-4 py-2.5">Section</th>
               <th class="px-4 py-2.5">Added</th>
               <th class="px-4 py-2.5"></th>
@@ -381,8 +499,51 @@
       </div>
     </section>
 
+    <!-- EDIT SUBJECT MODAL -->
+    <div id="editSubjectModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editSubjectModalTitle">
+      <div class="bg-white border border-[#E3DFC8] rounded-2xl shadow-2xl max-w-md w-full p-6 transition-all transform scale-100">
+        <div class="flex items-center justify-between border-b border-[#EFEBDB] pb-3 mb-5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-[#FBF3D9] text-[#8A6A0C] flex items-center justify-center font-bold text-sm">
+              <img src="ICON/edit.svg" class="w-4 h-4" alt="Edit">
+            </div>
+            <div>
+              <h3 id="editSubjectModalTitle" class="font-display text-base font-bold text-[#14432A]">Edit Subject Details</h3>
+              <p class="text-xs text-[#6B7060]">Update course number, description, and units.</p>
+            </div>
+          </div>
+          <button type="button" id="closeEditSubjectModalBtn" class="text-[#8A8D93] hover:text-[#14432A] p-1.5 rounded-lg hover:bg-[#FAF7EF] transition flex items-center justify-center" aria-label="Close modal dialog"><img src="ICON/close.svg" class="w-3.5 h-3.5" alt="Close"></button>
+        </div>
+
+        <form id="editSubjectModalForm">
+          <input type="hidden" id="editSubjectId">
+          <input type="hidden" id="editSubjectOriginalCode">
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Course Number</label>
+            <input id="editCourseNumber" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Course Description / Title</label>
+            <input id="editCourseDescription" class="w-full border border-[#DEDACE] rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Units</label>
+            <input id="editCourseUnit" type="number" step="0.5" min="0" class="w-full border border-[#DEDACE] rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#EFEBDB]">
+            <button type="button" id="cancelEditSubjectModalBtn" class="px-4 py-2.5 text-sm font-semibold text-[#6B7060] hover:bg-[#F6F4EB] rounded-lg transition">Cancel</button>
+            <button type="submit" id="saveEditSubjectBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition shadow">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- TOAST -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
       <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
     </div>
 
@@ -392,6 +553,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabaseClient.js"></script>
 <script src="session.js"></script>
+<script src="attendanceManager.js"></script>
+<script src="qrClient.js"></script>
+<script src="zktecoClient.js"></script>
+<script src="biometricSigner.js"></script>
 <script src="depthead.js"></script>
 </body>
 </html>

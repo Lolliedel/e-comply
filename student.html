@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Student Portal</title>
+<title>ESSU E-Comply — Student Portal</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -16,55 +17,126 @@
 </head>
 <body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
 
-<div id="appShell" class="hidden max-w-2xl mx-auto">
+<div id="appShell" class="hidden w-full max-w-4xl mx-auto">
 
-  <div class="flex items-center justify-between mb-6">
+  <header class="flex items-center justify-between mb-6" role="banner">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full seal shrink-0"></div>
+      <div class="w-11 h-11 rounded-full bg-white p-1 shadow-md border-2 border-[#D9A62C] flex items-center justify-center shrink-0">
+        <img src="ICON/ESSU.png" alt="ESSU Logo" class="w-full h-full object-contain">
+      </div>
       <div>
-        <div class="font-display text-lg font-bold leading-tight">Student Portal</div>
-        <div id="headerDept" class="text-xs text-[#6B7060] mt-0.5">—</div>
+        <div class="font-display text-lg font-bold text-[#14432A] leading-tight">ESSU E-Comply</div>
+        <div id="headerDept" class="text-xs text-[#8A6A0C] font-semibold mt-0.5">Student Portal</div>
       </div>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="if(typeof QRClient!=='undefined')QRClient.openSampleSchoolIdModal('student')" class="text-xs font-semibold text-[#14432A] bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-2.5 py-1 rounded-md transition flex items-center gap-1 shadow-2xs">
+        <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> Sample School IDs
+      </button>
       <a href="profile.html" class="text-xs font-semibold text-[#8A6A0C] hover:underline">Edit Profile</a>
-      <button onclick="portalLogout()" class="text-xs text-[#8A6A0C] hover:underline">↩ Sign out</button>
+      <button onclick="portalLogout()" class="text-xs text-[#8A6A0C] hover:underline flex items-center gap-1"><img src="ICON/user.svg" class="w-3.5 h-3.5 inline" alt=""> Sign out</button>
     </div>
-  </div>
+  </header>
 
   <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-5">
     <div class="flex items-center gap-4 mb-5">
       <div id="avatar" class="w-14 h-14 rounded-full bg-[#1F6F4A] text-white flex items-center justify-center font-display font-bold text-xl overflow-hidden">—</div>
       <div>
         <div id="fullName" class="font-display text-lg font-semibold">—</div>
-        <div id="section" class="text-sm text-[#6B7060]">—</div>
+        <div class="text-sm text-[#6B7060] flex items-center gap-2 flex-wrap mt-0.5">
+          <span id="studentCourseBadge" class="hidden px-2 py-0.5 rounded bg-[#14432A]/10 text-[#14432A] font-semibold text-xs"></span>
+          <span id="section">—</span>
+        </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-[#EFEBDB]">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-[#EFEBDB]">
       <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-lg p-3 flex items-center gap-2">
-        <span id="signatureIcon" class="text-lg">✎</span>
+        <img id="signatureIcon" src="ICON/signature.svg" class="w-5 h-5 object-contain" alt="">
         <div>
           <div class="text-xs font-semibold text-[#52555C]">E-Signature</div>
           <div id="signatureStatus" class="text-xs text-[#6B7060]">Not on file</div>
         </div>
       </div>
-      <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-lg p-3 flex items-center gap-2">
-        <span id="biometricIcon" class="text-lg">🔒</span>
-        <div>
-          <div class="text-xs font-semibold text-[#52555C]">Biometric</div>
-          <div id="biometricStatus" class="text-xs text-[#6B7060]">Not on file</div>
+      <div id="biometricCard" class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-lg p-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <img id="biometricIcon" src="ICON/biometric.svg" class="w-5 h-5 object-contain" alt="">
+          <div>
+            <div class="text-xs font-semibold text-[#52555C]">Biometric (Live20R)</div>
+            <div id="biometricStatus" class="text-xs text-[#6B7060]">Not on file</div>
+          </div>
         </div>
+        <button type="button" id="testBiometricBtn" class="hidden text-xs text-[#14432A] font-semibold hover:underline bg-white border border-[#DEDACE] px-2 py-1 rounded-md">
+          Test Scan
+        </button>
+      </div>
+      <div id="qrIdCardBadge" class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-lg p-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <img src="ICON/qr.svg" class="w-5 h-5 object-contain text-[#14432A]" alt="">
+          <div>
+            <div class="text-xs font-semibold text-[#52555C]">Digital ID & QR</div>
+            <div class="text-xs text-[#1F6F4A] font-semibold">Active & Scannable</div>
+          </div>
+        </div>
+        <button type="button" id="viewMyQrIdBtn" class="text-xs text-[#14432A] font-semibold hover:underline bg-white border border-[#DEDACE] px-2.5 py-1 rounded-md transition shadow-2xs">
+          View ID
+        </button>
       </div>
     </div>
   </div>
 
-  <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 text-sm text-[#6B7060]">
-    Your signature and biometric were captured by your Department Head when your record was created. If anything here looks wrong, ask them to update it.
+  <!-- TODAY'S CLASSES & BIOMETRIC ATTENDANCE -->
+  <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-5">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="font-display text-base font-semibold text-[#14432A] flex items-center gap-2"><img src="ICON/calendar.svg" class="w-5 h-5 object-contain" alt=""> Today's Classes & Attendance</h2>
+      <div class="flex items-center gap-2">
+        <button type="button" id="scanMyQrAttendanceBtn" class="inline-flex items-center gap-1 text-xs text-[#14432A] font-semibold bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-2.5 py-1 rounded-md transition">
+          <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> Scan QR ID
+        </button>
+        <button type="button" onclick="renderStudentAttendance()" class="text-xs text-[#14432A] font-semibold hover:underline">↻ Refresh</button>
+      </div>
+    </div>
+    <p class="text-xs text-[#6B7060] mb-4">Biometric attendance is strictly time-gated. You may record attendance using the Live20R biometric scanner or your official ESSU QR ID card alternative.</p>
+    <div id="todayAttendanceList" class="space-y-3"></div>
+    <div id="todayAttendanceEmpty" class="hidden text-sm text-[#6B7060] py-3 text-center bg-[#FAF7EF] rounded-lg border border-[#EFEBDB]">No scheduled classes open for attendance today.</div>
   </div>
 
+  <!-- RETURN OF ASSESSMENTS & SCORE ACKNOWLEDGMENT -->
+  <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-5">
+    <div class="flex items-center justify-between mb-1">
+      <div class="flex items-center gap-2">
+        <h2 class="font-display text-base font-semibold text-[#14432A] flex items-center gap-2"><img src="ICON/report.svg" class="w-5 h-5 object-contain" alt=""> Return of Assessments & Score Acknowledgment</h2>
+        <span id="pendingAssessmentNotificationBadge" class="hidden text-xs bg-[#B3432B] text-white px-2 py-0.5 rounded-full font-bold animate-pulse">0 Pending</span>
+      </div>
+      <button type="button" onclick="renderStudentAssessments()" class="text-xs text-[#14432A] font-semibold hover:underline">↻ Refresh</button>
+    </div>
+    <p class="text-xs text-[#6B7060] mb-4">Official Return of Assessment (ESSU-ACAD-711). Acknowledge your graded quizzes, practicals, and exams using your Live20R fingerprint scanner or your scannable QR Digital ID alternative.</p>
+    <div id="assessmentReturnsList" class="space-y-3"></div>
+    <div id="assessmentReturnsEmpty" class="hidden text-sm text-[#6B7060] py-3 text-center bg-[#FAF7EF] rounded-lg border border-[#EFEBDB]">No returned assessments posted for your section yet.</div>
+  </div>
+
+  <!-- MY GRADES -->
+  <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-5">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="font-display text-base font-semibold text-[#14432A] flex items-center gap-2"><img src="ICON/class_record.svg" class="w-5 h-5 object-contain" alt=""> My Grades & Reports of Grades</h2>
+      <span class="text-xs text-[#1F6F4A] bg-[#E1EEE6] px-2 py-0.5 rounded-full font-semibold">Private & Confidential</span>
+    </div>
+    <p class="text-xs text-[#6B7060] mb-4">Official ratings certified by your course instructors and department registrar.</p>
+    <div id="gradesList" class="space-y-3"></div>
+    <div id="gradesEmpty" class="hidden text-sm text-[#6B7060] py-3 text-center bg-[#FAF7EF] rounded-lg border border-[#EFEBDB]">No grade records posted for your enrolled courses yet.</div>
+  </div>
+
+  <div class="bg-white border border-[#E3DFC8] rounded-xl p-6">
+    <h2 class="font-display text-base font-semibold mb-1">My Courses</h2>
+    <p class="text-xs text-[#6B7060] mb-4">Course documents your Department Head/Faculty has approved for viewing. Items still in progress show as Pending.</p>
+    <div id="coursesList" class="space-y-4"></div>
+    <div id="coursesEmpty" class="hidden text-sm text-[#6B7060]">No courses found for your section yet.</div>
+  </div>
+
+  <p class="text-xs text-[#6B7060] mt-5">Your signature and biometric were captured by your Department Head when your record was created. If anything here looks wrong, ask them to update it.</p>
+
   <!-- TOAST -->
-  <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
     <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
   </div>
 </div>
@@ -72,6 +144,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabaseClient.js"></script>
 <script src="session.js"></script>
+<script src="attendanceManager.js"></script>
+<script src="assessmentReturnManager.js"></script>
+<script src="qrClient.js"></script>
+<script src="zktecoClient.js"></script>
+<script src="biometricSigner.js"></script>
 <script src="student.js"></script>
 </body>
 </html>

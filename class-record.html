@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ESSU E-Comply — Class Record & Reports of Grades</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Fraunces', serif; }
+  .font-mono { font-family: 'IBM Plex Mono', monospace; }
+  .doc-table td, .doc-table th { border: 1px solid #C9C2AC; padding: 6px 8px; vertical-align: middle; }
+  .doc-table { border-collapse: collapse; width: 100%; }
+  .field-input { width: 100%; border: none; outline: none; background: transparent; font-size: 13px; }
+  .field-input:focus { background: #FBF3D9; }
+  .grade-input { width: 100%; border: none; outline: none; background: transparent; font-size: 13px; text-align: center; }
+  .grade-input:focus { background: #FBF3D9; }
+  .score-cell-input { width: 100%; border: 1px solid #E3DFC8; border-radius: 4px; padding: 2px 4px; text-align: center; font-size: 12px; }
+  .score-cell-input:focus { border-color: #14432A; background: #FAF7EF; outline: none; }
+  .remarks-passed { color: #1F6F4A; font-weight: 600; }
+  .remarks-failed { color: #B3432B; font-weight: 600; }
+  .remarks-other { color: #8A6A0C; font-weight: 600; }
+  .view-tab.active { background: #14432A; color: #FFFFFF; font-weight: 600; }
+
+  @media print {
+    body { background: #fff !important; padding: 0 !important; }
+    #topBar, #viewTabs, #toast, .no-print { display: none !important; }
+    #appShell { max-width: none !important; }
+    #docSheet, #reportOfGradesView, #studentGradeSlipView { border: none !important; box-shadow: none !important; padding: 0.4in !important; }
+    .field-input, .grade-input { background: transparent !important; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="bg-[#EFEBDB] text-[#1B2116] p-3 sm:p-6">
+
+<div id="loadingState" class="max-w-4xl mx-auto mt-20 text-center text-sm text-[#6B7060]">Loading…</div>
+
+<div id="appShell" class="hidden max-w-5xl mx-auto">
+
+  <!-- TOP BAR -->
+  <div id="topBar" class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <a id="backLink" href="#" class="text-sm text-[#14432A] font-semibold hover:underline flex items-center gap-1"><img src="ICON/home.svg" class="w-4 h-4 object-contain" alt=""> Back to Portal</a>
+    
+    <!-- VIEW TOGGLE TABS (Staff Only) -->
+    <div id="viewTabs" class="flex items-center bg-white border border-[#DEDACE] rounded-xl p-1 shadow-sm">
+      <button type="button" id="tabReportBtn" onclick="switchView('report')" class="view-tab active px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[#52555C] transition flex items-center gap-1.5">
+        <img src="ICON/report.svg" class="w-4 h-4 object-contain" alt=""> Reports of Grades (Summary)
+      </button>
+      <button type="button" id="tabCalcBtn" onclick="switchView('calc')" class="view-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[#52555C] transition flex items-center gap-1.5">
+        <img src="ICON/class_record.svg" class="w-4 h-4 object-contain" alt=""> Class Record Calculator (BSIT-3A Formula)
+      </button>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span id="saveStatus" class="text-xs text-[#6B7060]"></span>
+      <button id="printBtn" onclick="window.print()" class="border border-[#DEDACE] hover:bg-white text-[#14432A] text-sm font-semibold px-4 py-2 rounded-lg transition flex items-center gap-1.5"><img src="ICON/print.svg" class="w-4 h-4 object-contain" alt=""> Print</button>
+      <button id="saveBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Save Record</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ VIEW 1: REPORTS OF GRADES (ESSU-ACAD-712.b) ══════════════════════════ -->
+  <div id="reportOfGradesView" class="bg-white border border-[#DEDACE] shadow-sm p-8 rounded-xl mb-8">
+
+    <!-- HEADER (letterhead) -->
+    <div class="text-center mb-1">
+      <input id="institutionName" class="field-input font-display font-bold text-base text-center" value="Eastern Samar State University">
+    </div>
+    <div class="text-center mb-4">
+      <input id="institutionTagline" class="field-input text-xs text-center text-[#6B7060]" placeholder="e.g. College of Information Technology">
+    </div>
+    <div class="text-center mb-1">
+      <input id="docTitle" class="field-input font-display font-bold text-lg text-center uppercase tracking-wide" value="Reports of Grades">
+    </div>
+    <div class="flex items-center justify-center gap-2 mb-5 text-sm">
+      <input id="semesterTerm" class="field-input text-center font-semibold" style="width:auto; flex:0 1 180px" value="First Semester">
+      <span>·</span>
+      <span class="text-[#6B7060]">School Year</span>
+      <input id="schoolYear" class="field-input text-center font-semibold" style="width:auto; flex:0 1 120px" placeholder="2025-2026">
+    </div>
+
+    <!-- COURSE INFO + GRADING SYSTEM -->
+    <div class="flex flex-col sm:flex-row gap-0 mb-5 text-sm">
+      <table class="doc-table flex-1">
+        <tr>
+          <td><strong>Course No.:</strong><br><input id="courseNumber" class="field-input font-mono"></td>
+        </tr>
+        <tr>
+          <td><strong>Descriptive Title:</strong><br><input id="courseTitle" class="field-input"></td>
+        </tr>
+        <tr>
+          <td><strong>Course and Year:</strong><br><input id="courseSection" class="field-input" placeholder="e.g. BSIT 3A"></td>
+        </tr>
+        <tr>
+          <td><strong>Schedule:</strong><br><input id="schedule" class="field-input"></td>
+        </tr>
+        <tr>
+          <td><strong>No. of Units:</strong><br><input id="units" class="field-input" style="width:4em"></td>
+        </tr>
+        <tr>
+          <td><strong>Room:</strong><br><input id="room" class="field-input"></td>
+        </tr>
+      </table>
+
+      <table class="doc-table flex-1 text-xs">
+        <thead>
+          <tr class="bg-[#FAF7EF]">
+            <th colspan="3" class="text-center font-display normal-case">Grading System</th>
+          </tr>
+          <tr class="bg-[#FAF7EF]">
+            <th>Actual Rating</th>
+            <th>Equivalent Rating</th>
+            <th>Adjectival Rating</th>
+          </tr>
+        </thead>
+        <tbody id="gradingSystemBody"></tbody>
+      </table>
+    </div>
+
+    <!-- STUDENT GRADES SUMMARY TABLE -->
+    <div class="flex items-center justify-between mb-2 no-print">
+      <div class="font-display font-bold text-sm">Student Grades (Reports of Grades)</div>
+      <span class="text-xs text-[#6B7060]">Enter ratings directly (e.g. 1.5) or calculate with the formula tab. Codes: Dr, Wp, INC, IP.</span>
+    </div>
+    <div class="overflow-x-auto mb-6">
+      <table class="doc-table text-sm">
+        <thead>
+          <tr class="bg-[#FAF7EF]">
+            <th style="width:32px">No.</th>
+            <th>Name</th>
+            <th style="width:120px">Student No.</th>
+            <th style="width:90px">Midterms</th>
+            <th style="width:90px">Finals</th>
+            <th style="width:95px">Gen. Grade</th>
+            <th style="width:120px">Remarks</th>
+          </tr>
+        </thead>
+        <tbody id="gradesBody"></tbody>
+      </table>
+      <div id="gradesEmpty" class="hidden text-center py-6 text-xs text-[#8A8D93]">No students found in this course's section yet.</div>
+    </div>
+
+    <!-- SIGNATURES -->
+    <table class="doc-table mb-6 text-xs">
+      <tr>
+        <td class="w-1/4 text-center">
+          <div class="text-[#8A8D93] mb-6">Certified True and Correct:</div>
+          <input id="lecturerName" class="field-input font-bold uppercase text-center border-t border-[#C9C2AC] pt-1" placeholder="NAME OF LECTURER">
+          <div class="text-[#8A8D93] mt-1">Lecturer</div>
+        </td>
+        <td class="w-1/4 text-center">
+          <div class="text-[#8A8D93] mb-6">Checked:</div>
+          <input id="programHeadName" class="field-input font-bold uppercase text-center border-t border-[#C9C2AC] pt-1" placeholder="NAME OF PROGRAM HEAD">
+          <div class="text-[#8A8D93] mt-1">Program Head</div>
+        </td>
+        <td class="w-1/4 text-center">
+          <div class="text-[#8A8D93] mb-6">Noted:</div>
+          <input id="collegeDeanName" class="field-input font-bold uppercase text-center border-t border-[#C9C2AC] pt-1" placeholder="NAME OF COLLEGE DEAN">
+          <div class="text-[#8A8D93] mt-1">College Dean</div>
+        </td>
+        <td class="w-1/4 text-center">
+          <div class="text-[#8A8D93] mb-6">Received:</div>
+          <input id="registrarName" class="field-input font-bold uppercase text-center border-t border-[#C9C2AC] pt-1" placeholder="NAME OF UNIVERSITY REGISTRAR">
+          <div class="text-[#8A8D93] mt-1">University Registrar</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- FOOTER: DOCUMENT CONTROL -->
+    <table class="doc-table text-xs">
+      <tr>
+        <td class="w-1/3">
+          <div class="flex items-center gap-1 font-mono">
+            <input id="docCode" class="field-input font-mono" style="width:auto; flex:1" value="ESSU-ACAD-712.b">
+            <span>│</span>
+            Version <input id="docVersion" class="field-input font-mono" style="width:2.5em" value="5">
+          </div>
+        </td>
+        <td class="w-1/3"><input id="pageInfo" class="field-input" value="Page 1 of 1"></td>
+        <td class="w-1/3">
+          <strong>Effectivity Date:</strong>
+          <input id="effectivityDate" type="date" class="field-input">
+        </td>
+      </tr>
+    </table>
+
+  </div>
+
+  <!-- ══════════════════════════ VIEW 2: CLASS RECORD CALCULATOR (BSIT-3A FORMULA) ══════════════════════════ -->
+  <div id="calculatorView" class="hidden bg-white border border-[#DEDACE] shadow-sm p-6 rounded-xl mb-8">
+    
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-[#EFEBDB]">
+      <div>
+        <h2 class="font-display font-bold text-base text-[#14432A] flex items-center gap-2"><img src="ICON/class_record.svg" class="w-5 h-5 object-contain" alt=""> Dynamic Class Record & BSIT-3A Formula Engine</h2>
+        <p class="text-xs text-[#6B7060]">Formula: Practical (20%) + Quizzes (30%) + Attendance (10%) + Major Exam (40%) → Transmuted Base 55 Initial Grade → Equivalent Rating (1.0 to 5.0).</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="inline-flex rounded-lg border border-[#DEDACE] p-0.5 bg-[#FAF7EF]">
+          <button type="button" id="calcPeriodMidtermBtn" onclick="switchCalcPeriod('midterm')" class="px-3 py-1 text-xs font-semibold rounded-md bg-[#14432A] text-white">Midterms Period</button>
+          <button type="button" id="calcPeriodFinalsBtn" onclick="switchCalcPeriod('finals')" class="px-3 py-1 text-xs font-semibold rounded-md text-[#52555C]">Finals Period</button>
+        </div>
+        <button type="button" onclick="syncCalcToReport()" class="bg-[#D9A62C] hover:bg-[#C08F22] text-[#14432A] text-xs font-bold px-3.5 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+          <img src="ICON/sync.svg" class="w-3.5 h-3.5 object-contain" alt=""> Sync Ratings to Report of Grades
+        </button>
+      </div>
+    </div>
+
+    <!-- DYNAMIC ASSESSMENTS & MAX SCORES CONFIG -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 p-3 bg-[#FAF7EF] rounded-xl border border-[#EFEBDB] text-xs">
+      
+      <!-- Practical (20%) Config -->
+      <div class="bg-white p-3 rounded-lg border border-[#E3DFC8]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-bold text-[#14432A]">Practical (20%)</span>
+          <button type="button" onclick="addPracticalColumn()" class="text-[11px] text-[#14432A] font-bold hover:underline bg-[#E1EEE6] px-2 py-0.5 rounded">
+            + Add Practical
+          </button>
+        </div>
+        <div id="practicalsConfigList" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto"></div>
+      </div>
+
+      <!-- Quizzes (30%) Config -->
+      <div class="bg-white p-3 rounded-lg border border-[#E3DFC8]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-bold text-[#14432A]">Quizzes (30%)</span>
+          <button type="button" onclick="addQuizColumn()" class="text-[11px] text-[#14432A] font-bold hover:underline bg-[#FAF7EF] border border-[#DEDACE] px-2 py-0.5 rounded">
+            + Add Quiz
+          </button>
+        </div>
+        <div id="quizzesConfigList" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto"></div>
+      </div>
+
+      <!-- Attendance (10%) Config & Live Biometric Sync -->
+      <div class="bg-white p-3 rounded-lg border border-[#E3DFC8]">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="font-bold text-[#14432A]">Attendance (10%)</span>
+          <span id="biometricSessionsBadge" class="text-[10px] bg-[#E1EEE6] text-[#1F6F4A] font-semibold px-1.5 py-0.5 rounded">0 Sessions</span>
+        </div>
+        <div class="flex items-center gap-1.5 mb-2">
+          <span>Max Days:</span>
+          <input id="maxAtt" type="number" class="w-14 border rounded px-1 text-center font-semibold" value="17" onchange="recalculateAll()">
+        </div>
+        <button type="button" onclick="syncBiometricAttendance()" class="w-full text-center bg-[#14432A] hover:bg-[#1B5636] text-white text-[11px] font-semibold py-1 rounded transition flex items-center justify-center gap-1">
+          <img src="ICON/sync.svg" class="w-3.5 h-3.5 invert" alt=""> Sync Live Biometrics
+        </button>
+      </div>
+
+      <!-- Major Exam (40%) Config -->
+      <div class="bg-white p-3 rounded-lg border border-[#E3DFC8]">
+        <div class="font-bold text-[#14432A] mb-1.5">Major Exam (40%)</div>
+        <div class="flex items-center gap-1.5 mb-2">
+          <span>Max Score:</span>
+          <input id="maxExam" type="number" class="w-14 border rounded px-1 text-center font-semibold" value="75" onchange="recalculateAll()">
+        </div>
+        <p class="text-[10px] text-[#6B7060]">Midterm Exam or Final Exam percentage calculation based on raw exam score.</p>
+      </div>
+
+    </div>
+
+    <!-- DYNAMIC CALCULATOR STUDENT SCORE GRID -->
+    <div class="overflow-x-auto">
+      <table class="doc-table text-xs">
+        <thead id="calcGridHead"></thead>
+        <tbody id="calcGridBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════ VIEW 3: STUDENT INDIVIDUAL GRADE SLIP ══════════════════════════ -->
+  <div id="studentGradeSlipView" class="hidden bg-white border border-[#DEDACE] shadow-sm p-8 rounded-xl mb-8">
+    <div class="text-center mb-1">
+      <div class="font-display font-bold text-base">Eastern Samar State University</div>
+      <div id="studentSlipTagline" class="text-xs text-[#6B7060]">College of Information Technology</div>
+    </div>
+    <div class="text-center mb-4">
+      <div class="font-display font-bold text-lg uppercase tracking-wide">Official Student Grade Report</div>
+      <div class="text-xs text-[#6B7060]">Individual Student Copy · Privacy Protected</div>
+    </div>
+
+    <!-- STUDENT & COURSE INFO -->
+    <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-lg p-4 mb-5 text-xs grid grid-cols-2 gap-3">
+      <div><strong>Student Name:</strong> <span id="slipStudentName">—</span></div>
+      <div><strong>Student No.:</strong> <span id="slipStudentNo" class="font-mono">—</span></div>
+      <div><strong>Course:</strong> <span id="slipCourseInfo">—</span></div>
+      <div><strong>Instructor:</strong> <span id="slipInstructor">—</span></div>
+    </div>
+
+    <!-- INDIVIDUAL GRADE DETAILS -->
+    <table class="doc-table text-sm mb-6">
+      <thead>
+        <tr class="bg-[#FAF7EF]">
+          <th>Course Code</th>
+          <th>Descriptive Title</th>
+          <th class="text-center">Midterm Grade</th>
+          <th class="text-center">Finals Grade</th>
+          <th class="text-center">General Grade</th>
+          <th class="text-center">Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="slipCode" class="font-mono font-semibold">—</td>
+          <td id="slipTitle">—</td>
+          <td id="slipMidterm" class="text-center font-bold text-base">—</td>
+          <td id="slipFinals" class="text-center font-bold text-base">—</td>
+          <td id="slipGenGrade" class="text-center font-bold text-lg text-[#14432A]">—</td>
+          <td id="slipRemarks" class="text-center font-semibold">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- GRADING SCALE REFERENCE -->
+    <div class="mb-6">
+      <div class="font-semibold text-xs text-[#52555C] mb-2">Grading System Reference (ESSU-ACAD-712.b):</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-[#6B7060]">
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">1.0 : Outstanding (95-100%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">1.1 - 1.5 : Excellent (90-94%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">1.6 - 2.0 : Very Good (85-89%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">2.1 - 2.5 : Good (80-84%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">2.6 - 3.0 : Fair (75-79%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">3.1 - 3.5 : Conditional (70-74%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">3.6 - 5.0 : Failed (55-69%)</div>
+        <div class="p-2 bg-[#FAF7EF] rounded border border-[#E3DFC8]">Dr / INC / WP / IP : Non-numeric</div>
+      </div>
+    </div>
+
+    <!-- SIGNATURE SUMMARY -->
+    <div class="pt-4 border-t border-[#E3DFC8] text-xs flex justify-between items-center text-[#6B7060]">
+      <div>Document Control: <span class="font-mono">ESSU-ACAD-712.b</span></div>
+      <div>Certified by Department & College Registrar</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+  <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+<script src="session.js"></script>
+<script src="qrClient.js"></script>
+<script src="attendanceManager.js"></script>
+<script src="assessmentReturnManager.js"></script>
+<script src="class-record.js"></script>
+</body>
+</html>

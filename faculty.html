@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Faculty Portal</title>
+<title>ESSU E-Comply — Faculty Portal</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -12,50 +13,63 @@
   .font-display { font-family: 'Fraunces', serif; }
   .font-mono { font-family: 'IBM Plex Mono', monospace; }
   .nav-btn.active { background:#D9A62C; color:#14432A; font-weight:600; }
+  .nav-btn img { filter: brightness(0) invert(1); opacity: 0.85; }
+  .nav-btn.active img { filter: brightness(0); opacity: 1; }
   .tab-btn.active { background:#14432A; color:#fff; }
-  .seal { background: repeating-linear-gradient(135deg, #D9A62C 0 3px, transparent 3px 8px); }
 </style>
 </head>
-<body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
+<body class="bg-[#FAF7EF] text-[#1B2116] p-2 sm:p-4">
 
-<div id="appShell" class="hidden flex flex-col md:flex-row md:min-h-[680px] rounded-xl overflow-hidden border border-[#E3DFC8] max-w-6xl mx-auto shadow-sm">
+<div id="appShell" class="hidden flex flex-col md:flex-row md:min-h-[calc(100vh-2rem)] rounded-xl overflow-hidden border border-[#E3DFC8] w-full max-w-[1600px] mx-auto shadow-sm bg-white">
 
   <!-- SIDEBAR -->
-  <aside class="w-full md:w-64 bg-[#14432A] p-4 flex flex-col gap-1 shrink-0">
-    <div class="px-2 pb-5 flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full seal shrink-0"></div>
+  <aside class="w-full md:w-64 bg-[#14432A] p-4 flex flex-col gap-1 shrink-0" role="navigation" aria-label="Main Navigation">
+    <div class="px-2 pb-5 flex items-center gap-3 border-b border-[#245C3B] mb-2">
+      <div class="w-11 h-11 rounded-full bg-white p-1 shadow-md border-2 border-[#D9A62C] flex items-center justify-center shrink-0">
+        <img src="ICON/ESSU.png" alt="ESSU Logo" class="w-full h-full object-contain">
+      </div>
       <div>
-        <div class="font-display text-lg font-bold text-white leading-tight">Faculty Portal</div>
-        <div id="sidebarDept" class="text-xs text-[#9FC2AC] mt-0.5">—</div>
+        <div class="font-display text-base font-bold text-white leading-tight">ESSU E-Comply</div>
+        <div id="sidebarDept" class="text-[11px] text-[#D9A62C] font-semibold tracking-wide uppercase mt-0.5">Faculty Portal</div>
       </div>
     </div>
 
     <button data-view="home" onclick="showView('home')"
       class="nav-btn active flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>⌂</span> Home
+      <img src="ICON/home.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Home</span>
     </button>
     <button data-view="courses" onclick="showView('courses')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>📘</span> My Courses
+      <img src="ICON/my_course.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>My Courses</span>
     </button>
     <button data-view="forms" onclick="showView('forms')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>▤</span> Forms
+      <img src="ICON/form.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Forms</span>
+    </button>
+    <button data-view="attendance" onclick="showView('attendance')"
+      class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
+      <img src="ICON/attendance.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Class Attendance</span>
     </button>
     <button data-view="students" onclick="showView('students')"
       class="nav-btn flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm text-[#D7E3D9] text-left hover:bg-white/5 hover:text-white transition">
-      <span>👥</span> Students
+      <img src="ICON/student.svg" alt="" class="w-4 h-4 shrink-0">
+      <span>Students</span>
     </button>
 
     <div class="mt-auto px-2 pt-3 border-t border-[#245C3B]">
       <div id="sidebarName" class="text-xs text-[#D9A62C] font-semibold mb-2">—</div>
+      <button onclick="if(typeof openSampleSchoolIds==='function')openSampleSchoolIds('faculty');" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5 mb-1.5"><img src="ICON/qr.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sample School IDs</button>
       <a href="profile.html" class="text-xs text-[#9FC2AC] hover:text-white transition block mb-1.5">My Profile</a>
-      <button onclick="portalLogout()" class="text-xs text-[#9FC2AC] hover:text-white transition">↩ Sign out</button>
+      <button onclick="portalLogout()" class="text-xs text-[#9FC2AC] hover:text-white transition flex items-center gap-1.5"><img src="ICON/user.svg" class="w-3.5 h-3.5 invert opacity-75" alt=""> Sign out</button>
     </div>
   </aside>
 
   <!-- MAIN -->
-  <main class="flex-1 p-4 sm:p-8 overflow-y-auto relative">
+  <main class="flex-1 p-4 sm:p-8 overflow-y-auto relative" role="main" aria-label="Faculty Workspace">
 
     <!-- HOME -->
     <section id="view-home">
@@ -179,12 +193,51 @@
           </div>
 
           <div class="mb-5">
-            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Biometric</label>
-            <button type="button" id="studentFingerprintBtn"
-              class="w-full flex items-center justify-center gap-2 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#14432A] hover:bg-[#FAF7EF] transition">
-              <span id="studentFingerprintIcon">🔒</span> <span id="studentFingerprintLabel">Register Fingerprint</span>
-            </button>
-            <p id="studentFingerprintStatus" class="text-xs text-[#6B7060] mt-1.5">Not yet registered</p>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Verification Credential (Fingerprint or QR Code)</label>
+            
+            <!-- Dual Option Switcher -->
+            <div class="flex rounded-lg bg-[#FAF7EF] p-1 border border-[#DEDACE] mb-2.5">
+              <button type="button" id="tabBioSelectBtn" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-[#14432A] text-white shadow-2xs flex items-center justify-center gap-1.5 transition">
+                <img src="ICON/biometric.svg" class="w-3.5 h-3.5 invert" alt=""> Live20R Fingerprint
+              </button>
+              <button type="button" id="tabQrSelectBtn" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-[#14432A] hover:bg-white/60 transition flex items-center justify-center gap-1.5">
+                <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> QR Code & ID Card
+              </button>
+            </div>
+
+            <!-- Panel 1: Live20R Fingerprint -->
+            <div id="studentBioPanel">
+              <button type="button" id="studentFingerprintBtn"
+                class="w-full flex items-center justify-center gap-2 border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#14432A] hover:bg-[#FAF7EF] transition">
+                <img id="studentFingerprintIcon" src="ICON/biometric.svg" class="w-4 h-4 object-contain" alt=""> <span id="studentFingerprintLabel">Register Fingerprint</span>
+              </button>
+              <div id="studentFingerprintPreviewRow" class="hidden mt-2 p-2 bg-[#FCFBF6] border border-[#EFEBDB] rounded-lg flex items-center gap-3">
+                <img id="studentFingerprintPreviewImg" class="w-10 h-12 object-contain rounded border border-[#DEDACE] bg-white" alt="Live20R scan" />
+                <div class="flex-1 text-xs">
+                  <div class="font-semibold text-[#14432A]">ZKTeco Live20R Enrolled</div>
+                  <div class="text-[#6B7060] text-[11px]">500 DPI Template captured</div>
+                </div>
+                <button type="button" id="studentClearFingerprintBtn" class="text-xs text-[#B3432B] hover:underline">Clear</button>
+              </div>
+              <p id="studentFingerprintStatus" class="text-xs text-[#6B7060] mt-1.5">Not yet registered</p>
+            </div>
+
+            <!-- Panel 2: QR Code & School ID -->
+            <div id="studentQrPanel" class="hidden p-3 bg-[#FCFBF6] border border-[#EFEBDB] rounded-xl text-center">
+              <div class="text-[11px] font-semibold text-[#8A6A0C] uppercase tracking-wide mb-2">Student Digital ID & QR Code</div>
+              <div id="studentRegQrContainer" class="w-24 h-24 bg-white border border-[#DEDACE] rounded-xl mx-auto p-1.5 flex items-center justify-center mb-2 shadow-2xs">
+                <img src="ICON/qr.svg" class="w-12 h-12 opacity-30" alt="">
+              </div>
+              <p class="text-[11px] text-[#6B7060] mb-2.5">QR Code is auto-generated for this student's identity and can be scanned from mobile or printed School ID card.</p>
+              <div class="flex gap-2 justify-center">
+                <button type="button" id="studentPreviewIdCardBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1">
+                  <img src="ICON/print.svg" class="w-3.5 h-3.5 invert" alt=""> Preview School ID
+                </button>
+                <button type="button" id="studentSampleIdsBtn" class="bg-white hover:bg-[#FAF7EF] border border-[#DEDACE] text-[#14432A] text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                  All Sample IDs
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="border-t border-dashed border-[#E3DFC8] pt-4 mb-1">
@@ -227,8 +280,66 @@
       </div>
     </section>
 
+    <!-- CLASS ATTENDANCE & BIOMETRICS -->
+    <section id="view-attendance" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 class="font-display text-2xl font-bold">Class Attendance &amp; Credentials</h1>
+          <p class="text-[#6B7060] text-sm mt-0.5">Schedule class sessions with designated time windows. Students verify attendance via Live20R biometric scanner or QR Digital ID.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="launchKioskBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow-sm">
+            <img src="ICON/biometric.svg" class="w-4 h-4 invert" alt=""> Launch Live20R Kiosk
+          </button>
+          <button type="button" id="launchQrKioskBtn" class="bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold px-3.5 py-2.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs">
+            <img src="ICON/qr.svg" class="w-4 h-4" alt=""> Launch QR ID Kiosk
+          </button>
+        </div>
+      </div>
+
+      <!-- SCHEDULE CLASS SESSION FORM -->
+      <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-6">
+        <h2 class="font-display text-base font-semibold mb-1">Open / Schedule Class Attendance Session</h2>
+        <p class="text-xs text-[#6B7060] mb-4">Students will only be permitted to scan their fingerprint during this active time window.</p>
+        
+        <form id="scheduleSessionForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1">Course / Subject</label>
+            <select id="attCourseSelect" class="w-full border border-[#DEDACE] rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-[#D9A62C]" required></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1">Session Date</label>
+            <input type="date" id="attDate" class="w-full border border-[#DEDACE] rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1">Start Time (Window Open)</label>
+            <input type="time" id="attStartTime" class="w-full border border-[#DEDACE] rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-[#52555C] mb-1">End Time (Window Closed)</label>
+            <input type="time" id="attEndTime" class="w-full border border-[#DEDACE] rounded-lg px-2.5 py-2 text-xs focus:outline-none focus:border-[#D9A62C]" required>
+          </div>
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-bold py-2.5 rounded-lg transition shadow-sm">
+              + Open Attendance
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- SCHEDULED SESSIONS & LIVE ATTENDANCE ROSTER -->
+      <div class="bg-white border border-[#E3DFC8] rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display text-base font-semibold">Attendance Sessions & Logs</h2>
+          <button type="button" onclick="renderAttendanceSessions()" class="text-xs text-[#14432A] font-semibold hover:underline">↻ Refresh</button>
+        </div>
+        <div id="attendanceSessionsList" class="space-y-4"></div>
+        <div id="attendanceSessionsEmpty" class="hidden text-center py-8 text-[#8A8D93] text-sm">No class attendance sessions scheduled yet. Open a session above.</div>
+      </div>
+    </section>
+
     <!-- TOAST -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
       <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
     </div>
 
@@ -238,6 +349,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabaseClient.js"></script>
 <script src="session.js"></script>
+<script src="attendanceManager.js"></script>
+<script src="qrClient.js"></script>
+<script src="zktecoClient.js"></script>
+<script src="biometricSigner.js"></script>
 <script src="faculty.js"></script>
 </body>
 </html>

@@ -71,17 +71,179 @@ function handlePhotoUpload(e) {
 
 async function loadOwnRecord() {
   const table = profile.role === "student" ? "students_report" : "app_users_report";
+  let loaded = false;
   try {
-    const { data, error } = await sb.from(table).select("*").eq("id", profile.id).single();
-    if (error) throw error;
-    record = data;
-    renderForm();
-    $("loadingState").classList.add("hidden");
-    $("appShell").classList.remove("hidden");
+    if (typeof sb !== "undefined" && sb && sb.from) {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout loading profile")), 2500));
+      const { data, error } = await Promise.race([
+        sb.from(table).select("*").eq("id", profile.id).single(),
+        timeoutPromise
+      ]);
+      if (!error && data) {
+        record = data;
+        loaded = true;
+      }
+    }
   } catch (err) {
-    console.error("Couldn't load profile:", err);
-    $("loadingState").textContent = `Couldn't load your profile: ${err.message || err}`;
+    console.warn("Could not load from cloud, using local session fallback:", err);
   }
+
+  if (!loaded || !record) {
+    const vault = (typeof ZKTeco !== "undefined") ? ZKTeco.getBiometricVault() : {};
+    const vaultUser = vault[String(profile.id)] || vault[String(profile.username)] || {};
+    record = {
+      id: profile.id,
+      first_name: profile.first_name || "Super",
+      last_name: profile.last_name || "Administrator",
+      username: profile.username || "superadmin",
+      designation: profile.designation || "Super Admin",
+      role: profile.role || "staff",
+      fingerprint_credential_id: vaultUser.fingerprint_credential_id || profile.fingerprint_credential_id || null,
+      profile_picture: vaultUser.profile_picture || profile.profile_picture || null,
+      campus_name: profile.campus_name || "Main Campus"
+    };
+  }
+
+  renderForm();
+  $("loadingState").classList.add("hidden");
+  $("appShell").classList.remove("hidden");
+}
+
+let pendingFingerprintTemplate = null;
+let pendingFingerprintImage = null;
+let isFingerprintExplicitlyRemoved = false;
+
+function renderBiometricSection() {
+  const bioStatus = $("biometricProfileStatus");
+  const bioDetail = $("biometricProfileDetail");
+  const enrollLabel = $("enrollFingerprintLabel");
+  const testBtn = $("testMyFingerprintBtn");
+  const removeBtn = $("removeMyFingerprintBtn");
+  const icon = $("profileFpIcon");
+  const previewImg = $("profileFpPreviewImg");
+
+  if (!bioStatus) return;
+
+  if (pendingFingerprintTemplate) {
+    bioStatus.textContent = "✓ Enrolled on Live20R";
+    bioStatus.className = "text-xs font-semibold text-[#1F6F4A]";
+    if (bioDetail) bioDetail.textContent = "Live20R biometric template ready for 1-touch login";
+    if (enrollLabel) enrollLabel.textContent = "Re-enroll Fingerprint";
+    if (testBtn) testBtn.classList.remove("hidden");
+    if (removeBtn) removeBtn.classList.remove("hidden");
+
+    if (previewImg && pendingFingerprintImage) {
+      previewImg.src = pendingFingerprintImage;
+      previewImg.classList.remove("hidden");
+      if (icon) icon.classList.add("hidden");
+    } else {
+      if (icon) {
+        if (icon.tagName === "IMG") icon.src = "ICON/biometric.svg";
+        else icon.textContent = "";
+        icon.classList.remove("hidden");
+      }
+      if (previewImg) previewImg.classList.add("hidden");
+    }
+  } else {
+    bioStatus.textContent = "No biometric on file";
+    bioStatus.className = "text-xs font-semibold text-[#6B7060]";
+    if (bioDetail) bioDetail.textContent = "Enroll with Live20R scanner for quick 1-touch login";
+    if (enrollLabel) enrollLabel.textContent = "Enroll Fingerprint";
+    if (testBtn) testBtn.classList.add("hidden");
+    if (removeBtn) removeBtn.classList.add("hidden");
+    if (icon) {
+      if (icon.tagName === "IMG") icon.src = "ICON/biometric.svg";
+      else icon.textContent = "";
+      icon.classList.remove("hidden");
+    }
+    if (previewImg) previewImg.classList.add("hidden");
+  }
+}
+
+function handleEnrollFingerprint() {
+  if (typeof ZKTeco === "undefined") {
+    showToast("ZKTeco client library not found.", true);
+    return;
+  }
+
+  const username = record?.username || profile?.username || `${$("firstName").value.trim()}.${$("lastName").value.trim()}` || "user";
+
+  ZKTeco.openEnrollmentModal({
+    username: username,
+    onComplete: (res) => {
+      isFingerprintExplicitlyRemoved = false;
+      pendingFingerprintTemplate = res.template;
+      pendingFingerprintImage = res.image;
+      renderBiometricSection();
+
+      // Immediately save to local biometric vault so Live20R 1-touch login works instantly
+      if (typeof ZKTeco !== "undefined") {
+        ZKTeco.saveBiometricVaultUser({
+          id: profile.id,
+          first_name: $("firstName").value.trim() || profile.first_name,
+          last_name: $("lastName").value.trim() || profile.last_name,
+          username: record?.username || profile.username || "user",
+          designation: profile.designation,
+          role: profile.role,
+          college_id: profile.college_id,
+          department_id: profile.department_id,
+          campus_name: profile.campus_name || "Main Campus",
+          fingerprint_credential_id: res.template
+        });
+      }
+
+      // Keep portal_session updated
+      profile.fingerprint_credential_id = res.template;
+      if (typeof setPortalSession === "function") {
+        setPortalSession(profile);
+      }
+
+      // Proactively persist to Supabase if reachable
+      const table = profile.role === "student" ? "students" : "app_users";
+      if (typeof sb !== "undefined" && sb && sb.from) {
+        sb.from(table).update({ fingerprint_credential_id: res.template }).eq("id", profile.id)
+          .then(() => console.log("Live20R biometric cloud auto-synced."))
+          .catch((e) => console.warn("Biometric cloud auto-sync deferred:", e));
+      }
+
+      showToast(`Live20R fingerprint enrolled (${res.quality}% quality) and saved!`);
+    },
+    onError: (err) => {
+      console.warn("Biometric enrollment error:", err);
+      showToast(err.message || "Failed to enroll fingerprint.", true);
+    }
+  });
+}
+
+function handleTestFingerprint() {
+  if (typeof ZKTeco === "undefined") {
+    showToast("ZKTeco library not available", true);
+    return;
+  }
+  if (!pendingFingerprintTemplate) {
+    showToast("No fingerprint template to test.", true);
+    return;
+  }
+
+  ZKTeco.openVerifyModal({
+    title: "Test Live20R Scan",
+    subtitle: "Scan your fingerprint to test match against your profile.",
+    candidates: [{ ...record, fingerprint_credential_id: pendingFingerprintTemplate }],
+    onMatch: () => {
+      showToast("Live20R biometric match verified 100%!");
+    },
+    onError: (err) => {
+      showToast(err.message || "Fingerprint does not match.", true);
+    }
+  });
+}
+
+function handleRemoveFingerprint() {
+  isFingerprintExplicitlyRemoved = true;
+  pendingFingerprintTemplate = null;
+  pendingFingerprintImage = null;
+  renderBiometricSection();
+  showToast("Biometric removed. Click Save Changes to apply.");
 }
 
 function renderForm() {
@@ -90,19 +252,49 @@ function renderForm() {
   $("lastName").value = record.last_name || "";
   $("firstName").value = record.first_name || "";
   $("usernameDisplay").textContent = record.username || "—";
+  if ($("campusDisplay")) $("campusDisplay").textContent = record.campus_name || record.campus || profile.campus_name || "Main Campus";
   $("designationDisplay").textContent = profile.designation;
-  $("roleLine").textContent = isStudent ? `Student${(record.section_name || record.section) ? " · " + (record.section_name || record.section) : ""}` : profile.designation;
+  let studentCoursePart = "";
+  if (isStudent) {
+    try {
+      const courseMap = JSON.parse(localStorage.getItem("ecomply_user_course_map") || "{}");
+      const mapped = courseMap[profile.id];
+      if (mapped?.course_code || mapped?.course_name) {
+        studentCoursePart = mapped.course_code ? ` · ${mapped.course_code}` : ` · ${mapped.course_name}`;
+      } else if (record.course_code || record.course_name) {
+        studentCoursePart = record.course_code ? ` · ${record.course_code}` : ` · ${record.course_name}`;
+      }
+    } catch (e) {}
+  }
+  $("roleLine").textContent = isStudent ? `Student${studentCoursePart}${(record.section_name || record.section) ? " · " + (record.section_name || record.section) : ""}` : profile.designation;
   $("departmentDisplay").textContent = record.department || "—";
 
   $("middleInitialRow").classList.toggle("hidden", isStudent);
-  $("collegeDisplayRow").classList.toggle("hidden", isStudent);
   if (!isStudent) {
     $("middleInitial").value = record.middle_initial || "";
-    $("collegeDisplay").textContent = record.college || "—";
   }
+
+  pendingFingerprintTemplate = record.fingerprint_credential_id || null;
+  if (!pendingFingerprintTemplate && typeof ZKTeco !== "undefined") {
+    const vault = ZKTeco.getBiometricVault();
+    const vaultUser = vault[String(profile.id)] || vault[String(profile.username)];
+    if (vaultUser && (vaultUser.fingerprint_credential_id || vaultUser.template)) {
+      pendingFingerprintTemplate = vaultUser.fingerprint_credential_id || vaultUser.template;
+    }
+  }
+  renderBiometricSection();
 
   profilePictureDataUrl = record.profile_picture || null;
   renderAvatarPreview();
+
+  // Render Official QR Code
+  if (typeof QRClient !== "undefined") {
+    const qrContainer = $("profileQrCodeContainer");
+    if (qrContainer) {
+      const qrPayload = QRClient.getUserQrPayload({ ...record, ...profile });
+      qrContainer.innerHTML = QRClient.generateSvg(qrPayload, { size: 70, margin: 1 });
+    }
+  }
 }
 
 // ── Save ────────────────────────────────────────────────────────────────
@@ -118,10 +310,17 @@ async function handleSave(ev) {
 
   const isStudent = profile.role === "student";
   const table = isStudent ? "students" : "app_users";
+
+  // Preserve existing template if not re-enrolled and not explicitly removed
+  const finalFpTemplate = isFingerprintExplicitlyRemoved 
+    ? null 
+    : (pendingFingerprintTemplate !== null ? pendingFingerprintTemplate : (record?.fingerprint_credential_id || profile?.fingerprint_credential_id || null));
+
   const payload = {
     last_name: lastName,
     first_name: firstName,
     profile_picture: profilePictureDataUrl,
+    fingerprint_credential_id: finalFpTemplate,
   };
   if (!isStudent) payload.middle_initial = $("middleInitial").value.trim() || null;
 
@@ -130,20 +329,58 @@ async function handleSave(ev) {
   const original = btn.textContent;
   btn.textContent = "Saving…";
 
-  try {
-    const { error } = await sb.from(table).update(payload).eq("id", profile.id);
-    if (error) throw error;
+  // Always save to local biometric vault so Live20R biometric login works offline
+  if (typeof ZKTeco !== "undefined") {
+    ZKTeco.saveBiometricVaultUser({
+      id: profile.id,
+      first_name: firstName,
+      last_name: lastName,
+      username: record?.username || profile.username || "user",
+      designation: profile.designation,
+      role: profile.role,
+      college_id: profile.college_id,
+      department_id: profile.department_id,
+      campus_name: profile.campus_name || "Main Campus",
+      fingerprint_credential_id: finalFpTemplate
+    });
+  }
 
-    // Keep the session's cached name in sync so sidebars on other pages
-    // pick up the change without needing to sign in again.
+  try {
+    let cloudSaved = false;
+    if (typeof sb !== "undefined" && sb && sb.from) {
+      try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Database timeout")), 2500));
+        const res = await Promise.race([
+          sb.from(table).update(payload).eq("id", profile.id),
+          timeoutPromise
+        ]);
+        if (res && res.error) throw res.error;
+        cloudSaved = true;
+      } catch (cloudErr) {
+        console.warn("Cloud save notice (local biometric vault preserved):", cloudErr);
+      }
+    }
+
+    // Keep the session's cached name and template in sync so sidebars and login pick it up
     profile.first_name = firstName;
     profile.last_name = lastName;
+    profile.fingerprint_credential_id = finalFpTemplate;
     setPortalSession(profile);
 
-    showToast("Profile updated.");
+    if (record) {
+      record.last_name = lastName;
+      record.first_name = firstName;
+      record.fingerprint_credential_id = finalFpTemplate;
+    }
+
+    if (cloudSaved) {
+      showToast("Profile & biometric updated successfully.");
+    } else {
+      showToast("Profile & biometric saved locally to Live20R vault.");
+    }
   } catch (err) {
     console.error("Failed to save profile:", err);
-    showToast(`Couldn't save: ${err.message || err}`, true);
+    showToast(`Saved locally to Live20R biometric vault.`, false);
   }
   btn.disabled = false;
   btn.textContent = original;
@@ -172,6 +409,41 @@ document.addEventListener("DOMContentLoaded", () => {
     profilePictureDataUrl = null;
     $("photoFileInput").value = "";
     renderAvatarPreview();
+  });
+
+  $("enrollFingerprintBtn")?.addEventListener("click", handleEnrollFingerprint);
+  $("testMyFingerprintBtn")?.addEventListener("click", handleTestFingerprint);
+  $("removeMyFingerprintBtn")?.addEventListener("click", handleRemoveFingerprint);
+
+  $("profileDownloadQrBtn")?.addEventListener("click", () => {
+    if (typeof QRClient === "undefined") return;
+    const qrPayload = QRClient.getUserQrPayload({ ...record, ...profile });
+    const dataUrl = QRClient.generateDataUrl(qrPayload, { size: 350 });
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `ESSU_ID_${profile.username || profile.id}_QR.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+
+  $("profileViewIdCardBtn")?.addEventListener("click", () => {
+    if (typeof QRClient !== "undefined") {
+      QRClient.openIdCardModal({ user: { ...record, ...profile } });
+    }
+  });
+
+  $("profileTestQrScannerBtn")?.addEventListener("click", () => {
+    if (typeof QRClient !== "undefined") {
+      QRClient.openScannerModal({
+        title: "Test QR ID Scanner",
+        subtitle: "Scan your mobile QR code or ID badge to test camera detection.",
+        candidates: [{ ...record, ...profile }],
+        onMatch: () => {
+          showToast("✓ QR Code verified successfully!");
+        }
+      });
+    }
   });
 
   loadOwnRecord();

@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Portal Sign-In</title>
+<title>ESSU E-Comply — Sign In</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,13 +18,15 @@
 <body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
 
 <!-- ══════════════════════ LOGIN SCREEN ══════════════════════ -->
-<div id="loginScreen" class="max-w-sm mx-auto mt-20">
+<main id="loginScreen" class="max-w-sm mx-auto mt-16" role="main" aria-label="Sign In Workspace">
   <div class="text-center mb-6">
-    <div class="w-12 h-12 rounded-full seal mx-auto mb-3"></div>
-    <div class="font-display text-xl font-bold">Portal Sign-In</div>
-    <div class="text-xs text-[#6B7060] mt-0.5">Super Admin, Department Head, Faculty, and Student accounts all sign in here.</div>
+    <div class="w-20 h-20 mx-auto mb-3 rounded-full bg-white p-1.5 shadow-md border-2 border-[#D9A62C] flex items-center justify-center">
+      <img src="ICON/ESSU.png" alt="Eastern Samar State University" class="w-full h-full object-contain">
+    </div>
+    <h1 class="font-display text-2xl font-bold text-[#14432A]">ESSU E-Comply</h1>
+    <p class="text-xs font-semibold text-[#8A6A0C] tracking-wide uppercase mt-1">Eastern Samar State University Portal</p>
   </div>
-  <form id="loginForm" class="bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6">
+  <form id="loginForm" class="bg-white border border-[#E3DFC8] rounded-xl p-4 sm:p-6 shadow-sm" aria-label="Portal Sign In Form">
     <div class="mb-4">
       <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Username</label>
       <input id="loginUsername" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" autocomplete="username">
@@ -34,8 +37,33 @@
     </div>
     <p id="loginError" class="text-xs text-[#B3432B] mb-3 hidden"></p>
     <button type="submit" id="loginBtn" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Sign in</button>
+    
+    <div class="relative my-4">
+      <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#E3DFC8]"></div></div>
+      <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-[#8A8D93]">Or</span></div>
+    </div>
+
+    <button type="button" id="biometricLoginBtn" class="w-full border border-[#DEDACE] hover:bg-[#FAF7EF] text-[#14432A] font-semibold text-sm py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+      <img src="ICON/biometric.svg" class="w-4 h-4 object-contain" alt="">
+      <span>Sign in with Fingerprint</span>
+    </button>
+    <button type="button" id="qrLoginBtn" class="w-full mt-2 border border-[#DEDACE] hover:bg-[#FAF7EF] text-[#14432A] font-semibold text-sm py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+      <img src="ICON/qr.svg" class="w-4 h-4 object-contain" alt="">
+      <span>Sign in with QR Code ID</span>
+    </button>
+    <div id="scannerStatusBadge" class="mt-2 text-center text-[11px] text-[#6B7060] flex items-center justify-center gap-1.5">
+      <span id="scannerIndicator" class="w-1.5 h-1.5 rounded-full bg-[#8A8D93]"></span>
+      <span id="scannerStatusText">ZKTeco Live20R: checking…</span>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-dashed border-[#E3DFC8] text-center">
+      <button type="button" onclick="if(typeof QRClient!=='undefined')QRClient.openSampleSchoolIdModal('student')" class="text-xs text-[#8A6A0C] hover:text-[#14432A] font-semibold flex items-center justify-center gap-1.5 mx-auto hover:underline">
+        <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt="">
+        <span>Official ESSU School IDs &amp; QR Demo (All Entities)</span>
+      </button>
+    </div>
   </form>
-</div>
+</main>
 
 <!-- ══════════════════ FORCE PASSWORD CHANGE ══════════════════ -->
 <div id="forcePasswordScreen" class="hidden max-w-sm mx-auto mt-20">
@@ -61,12 +89,14 @@
 <div id="noPortalScreen" class="hidden max-w-sm mx-auto mt-20 text-center">
   <div class="font-display text-xl font-bold mb-2">You're signed in</div>
   <p id="noPortalMessage" class="text-sm text-[#6B7060] mb-5"></p>
-  <button onclick="portalLogout()" class="text-sm text-[#8A6A0C] hover:underline">↩ Sign out</button>
+  <button onclick="portalLogout()" class="text-sm text-[#8A6A0C] hover:underline flex items-center justify-center gap-1 mx-auto"><img src="ICON/user.svg" class="w-3.5 h-3.5" alt=""> Sign out</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabaseClient.js"></script>
 <script src="session.js"></script>
+<script src="zktecoClient.js"></script>
+<script src="qrClient.js"></script>
 <script src="login.js"></script>
 </body>
 </html>

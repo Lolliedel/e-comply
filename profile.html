@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Profile</title>
+<title>ESSU E-Comply — My Profile</title>
+<link rel="icon" type="image/png" href="ICON/ESSU.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,16 +16,30 @@
 </head>
 <body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
 
-<div id="loadingState" class="max-w-xl mx-auto mt-20 text-center text-sm text-[#6B7060]">Loading…</div>
+<div id="loadingState" class="max-w-3xl mx-auto mt-20 text-center text-sm text-[#6B7060]">Loading…</div>
 
-<div id="appShell" class="hidden max-w-xl mx-auto">
+<div id="appShell" class="hidden w-full max-w-3xl mx-auto">
 
-  <div class="flex items-center justify-between mb-6">
-    <a id="backLink" href="#" class="text-sm text-[#14432A] font-semibold hover:underline">← Back</a>
-    <button onclick="portalLogout()" class="text-xs text-[#8A6A0C] hover:underline">↩ Sign out</button>
-  </div>
+  <header class="flex items-center justify-between mb-6 border-b border-[#E3DFC8] pb-4" role="banner">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-white p-1 shadow-md border-2 border-[#D9A62C] flex items-center justify-center shrink-0">
+        <img src="ICON/ESSU.png" alt="ESSU Logo" class="w-full h-full object-contain">
+      </div>
+      <div>
+        <div class="font-display text-base font-bold text-[#14432A]">ESSU E-Comply</div>
+        <div class="text-xs text-[#8A6A0C] font-semibold">User Profile &amp; Preferences</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="if(typeof QRClient!=='undefined')QRClient.openSampleSchoolIdModal(profile?.designation?.toLowerCase()?.replace(/\s+/g,'')||'student')" class="text-xs font-semibold text-[#14432A] bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] px-2.5 py-1 rounded-md transition flex items-center gap-1 shadow-2xs">
+        <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> Sample School IDs
+      </button>
+      <a id="backLink" href="#" class="text-sm text-[#14432A] font-semibold hover:underline">← Back to Dashboard</a>
+      <button onclick="portalLogout()" class="text-xs text-[#8A6A0C] hover:underline flex items-center gap-1"><img src="ICON/user.svg" class="w-3.5 h-3.5 inline" alt=""> Sign out</button>
+    </div>
+  </header>
 
-  <form id="profileForm" class="bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6 mb-5">
+  <form id="profileForm" class="bg-white border border-[#E3DFC8] rounded-xl p-3 sm:p-6 mb-5" aria-label="Edit User Profile Form">
 
     <!-- AVATAR + ROLE -->
     <div class="flex items-center gap-4 mb-6 pb-5 border-b border-[#EFEBDB]">
@@ -60,30 +75,100 @@
     </div>
 
     <!-- READ-ONLY ACCOUNT INFO -->
-    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-[#EFEBDB] mb-2">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#EFEBDB] mb-4">
       <div>
         <div class="text-xs font-semibold text-[#8A8D93] uppercase tracking-wide mb-1">Username</div>
         <div id="usernameDisplay" class="font-mono text-sm">—</div>
       </div>
       <div>
+        <div class="text-xs font-semibold text-[#8A8D93] uppercase tracking-wide mb-1">Campus</div>
+        <div id="campusDisplay" class="text-sm font-semibold text-[#14432A]">—</div>
+      </div>
+      <div>
         <div class="text-xs font-semibold text-[#8A8D93] uppercase tracking-wide mb-1">Department</div>
         <div id="departmentDisplay" class="text-sm">—</div>
       </div>
-      <div id="collegeDisplayRow">
-        <div class="text-xs font-semibold text-[#8A8D93] uppercase tracking-wide mb-1">College</div>
-        <div id="collegeDisplay" class="text-sm">—</div>
+    </div>
+
+    <!-- BIOMETRIC ENROLLMENT (ZKTeco Live20R) -->
+    <div class="pt-4 border-t border-[#EFEBDB] mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <label class="block text-xs font-semibold text-[#52555C] uppercase tracking-wide">Biometric (ZKTeco Live20R)</label>
+        <button type="button" id="enrollFingerprintBtn" class="text-xs text-[#14432A] font-semibold hover:bg-[#FAF7EF] border border-[#DEDACE] px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs">
+          <img src="ICON/scanner.svg" class="w-3.5 h-3.5"> <span id="enrollFingerprintLabel">Enroll Fingerprint</span>
+        </button>
+      </div>
+
+      <div id="profileFingerprintCard" class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-xl p-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-white border border-[#DEDACE] flex items-center justify-center text-lg shadow-2xs overflow-hidden shrink-0">
+            <img id="profileFpIcon" src="ICON/biometric.svg" class="w-5 h-5 text-[#14432A]">
+            <img id="profileFpPreviewImg" class="hidden w-full h-full object-contain" alt="Live20R Fingerprint">
+          </div>
+          <div>
+            <div id="biometricProfileStatus" class="text-xs font-semibold text-[#6B7060]">No biometric on file</div>
+            <div id="biometricProfileDetail" class="text-[11px] text-[#8A8D93]">Enroll with Live20R scanner for quick 1-touch login</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" id="testMyFingerprintBtn" class="hidden text-xs text-[#14432A] font-semibold hover:underline bg-white border border-[#DEDACE] px-2.5 py-1 rounded-lg">
+            Test Scan
+          </button>
+          <button type="button" id="removeMyFingerprintBtn" class="hidden text-xs text-[#B3432B] hover:underline px-2 py-1">
+            Remove
+          </button>
+        </div>
       </div>
     </div>
 
-    <p class="text-xs text-[#6B7060] mt-4 mb-5 pt-4 border-t border-dashed border-[#E3DFC8]">
-      Your username, designation, department, and college are set by whoever created your account. To change your signature or biometric, contact them.
+    <!-- DIGITAL UNIVERSITY ID & QR CREDENTIAL -->
+    <div class="pt-4 border-t border-[#EFEBDB] mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <label class="block text-xs font-semibold text-[#52555C] uppercase tracking-wide flex items-center gap-1.5">
+          <img src="ICON/qr.svg" class="w-3.5 h-3.5 text-[#14432A]" alt="">
+          <span>Digital University ID & QR Credential</span>
+        </label>
+        <div class="flex items-center gap-2">
+          <button type="button" id="profileDownloadQrBtn" class="text-xs text-[#14432A] font-semibold hover:bg-[#FAF7EF] border border-[#DEDACE] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-2xs">
+            <img src="ICON/qr.svg" class="w-3 h-3"> Download QR
+          </button>
+          <button type="button" id="profileViewIdCardBtn" class="text-xs bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs">
+            <img src="ICON/print.svg" class="w-3 h-3 invert"> View / Print ID Card
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-[#FCFBF6] border border-[#E3DFC8] rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div id="profileQrCodeContainer" class="w-20 h-20 bg-white border border-[#DEDACE] rounded-xl p-1.5 shadow-2xs shrink-0 flex items-center justify-center">
+            <!-- QR Code generated here -->
+          </div>
+          <div>
+            <div class="text-xs font-bold text-[#14432A]">Official Scannable QR ID</div>
+            <p class="text-[11px] text-[#6B7060] mt-0.5 max-w-sm">Use this QR code as your official digital credential for attendance and document signing if the Live20R biometric scanner is unavailable.</p>
+            <div class="mt-1 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1F6F4A] bg-[#E1EEE6] px-2 py-0.5 rounded-full">
+                ✓ Active ID Credential
+              </span>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="profileTestQrScannerBtn" class="text-xs text-[#8A6A0C] font-semibold hover:underline flex items-center gap-1 self-end sm:self-center">
+          <img src="ICON/scanner.svg" class="w-3.5 h-3.5"> Test Camera Scanner
+        </button>
+      </div>
+    </div>
+
+    <p class="text-xs text-[#6B7060] mb-5 pt-3 border-t border-dashed border-[#E3DFC8]">
+      Your username, designation, department, and college are set by administration. You can update your name, photo, Live20R biometric, and view your official QR ID card here.
     </p>
 
     <button type="submit" id="saveBtn" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Save changes</button>
   </form>
 
   <!-- TOAST -->
-  <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2">
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#14432A] text-white text-sm px-4 py-3 rounded-lg shadow-xl items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
     <span class="text-[#D9A62C]">✓</span> <span id="toastMsg"></span>
   </div>
 </div>
@@ -91,6 +176,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabaseClient.js"></script>
 <script src="session.js"></script>
+<script src="qrClient.js"></script>
+<script src="zktecoClient.js"></script>
 <script src="profile.js"></script>
 </body>
 </html>

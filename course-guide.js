@@ -9,6 +9,7 @@ function $(id) { return document.getElementById(id); }
 
 let profile = null;
 let courseId = null;
+let readOnly = false;
 let headerImageDataUrl = null; // base64 logo shown in the letterhead
 let scheduleRows = [];  // [{ date, topic }]
 let outcomeRows = [];   // [{ outcome, output }]
@@ -105,7 +106,7 @@ function renderScheduleTable() {
     <tr data-index="${i}">
       <td><input class="field-input schedule-field" data-key="date" placeholder="Month, Day" value="${row.date || ""}"></td>
       <td><textarea class="field-input schedule-field" data-key="topic" rows="1">${row.topic || ""}</textarea></td>
-      <td class="text-center"><button type="button" class="schedule-delete-btn text-[#B3432B] hover:opacity-70" title="Remove row">✕</button></td>
+      <td class="text-center"><button type="button" class="schedule-delete-btn text-[#B3432B] hover:opacity-70 p-1" title="Remove row"><img src="ICON/delete.svg" class="w-3.5 h-3.5 inline" alt="Remove"></button></td>
     </tr>
   `).join("");
 
@@ -132,7 +133,7 @@ function renderOutcomeTable() {
     <tr data-index="${i}">
       <td><textarea class="field-input outcome-field" data-key="outcome" rows="2">${row.outcome || ""}</textarea></td>
       <td><textarea class="field-input outcome-field" data-key="output" rows="2">${row.output || ""}</textarea></td>
-      <td class="text-center"><button type="button" class="outcome-delete-btn text-[#B3432B] hover:opacity-70" title="Remove row">✕</button></td>
+      <td class="text-center"><button type="button" class="outcome-delete-btn text-[#B3432B] hover:opacity-70 p-1" title="Remove row"><img src="ICON/delete.svg" class="w-3.5 h-3.5 inline" alt="Remove"></button></td>
     </tr>
   `).join("");
 
@@ -160,7 +161,7 @@ function renderAppendixList() {
         <div class="flex items-center gap-2">
           <div class="font-mono text-xs font-semibold text-[#6B7060] w-8 shrink-0">[${i + 1}]</div>
           <input class="field-input appendix-field border border-[#DEDACE] rounded px-2 py-1.5 flex-1" value="${(a.text || "").replace(/"/g, "&quot;")}" placeholder="e.g. Rubrics for Output 1">
-          <button type="button" data-id="${a.id}" class="appendix-delete-btn text-[#B3432B] hover:opacity-70" title="Remove appendix">✕</button>
+          <button type="button" data-id="${a.id}" class="appendix-delete-btn text-[#B3432B] hover:opacity-70 p-1" title="Remove appendix"><img src="ICON/delete.svg" class="w-3.5 h-3.5 inline" alt="Remove"></button>
         </div>
       `).join("")
     : `<div class="text-xs text-[#6B7060]">No appendices yet.</div>`;
@@ -256,6 +257,12 @@ async function loadCourseGuide() {
 
   renderForm(existing?.content || defaultContent(course));
 
+  if (readOnly) {
+    document.querySelectorAll(".field-input").forEach((el) => { el.disabled = true; });
+    document.querySelectorAll("#addScheduleRowBtn, #addOutcomeRowBtn, #addAppendixBtn, .schedule-delete-btn, .outcome-delete-btn, .appendix-delete-btn, #uploadHeaderLogoBtn, #removeHeaderLogoBtn").forEach((el) => el.remove());
+    $("saveBtn")?.remove();
+  }
+
   $("loadingState").classList.add("hidden");
   $("appShell").classList.remove("hidden");
 }
@@ -265,11 +272,26 @@ async function handleSave() {
   btn.disabled = true;
   const original = btn.textContent;
   btn.textContent = "Saving…";
+
+  if (typeof BiometricSigner !== "undefined" && profile) {
+    const auth = await BiometricSigner.requireBiometricSignature({
+      user: profile,
+      actionTitle: `Save Course Guide (${profile.designation || "Authorized User"})`,
+      subtitle: "Biometric authentication required to save and authorize Course Guide."
+    });
+    if (!auth.success) {
+      showToast("Save cancelled: Biometric signature required.", true);
+      btn.disabled = false;
+      btn.textContent = original;
+      return;
+    }
+  }
+
   try {
     const { error } = await sb.rpc("upsert_course_guide", { p_course_id: courseId, p_content: collectContent() });
     if (error) throw error;
     $("saveStatus").textContent = `Saved ${new Date().toLocaleTimeString()}`;
-    showToast("Course guide saved.");
+    showToast("Course guide saved with biometric verification.");
   } catch (err) {
     console.error("Failed to save course guide:", err);
     showToast(`Couldn't save: ${err.message || err}`, true);
@@ -281,8 +303,9 @@ async function handleSave() {
 // ── Startup ─────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
-  profile = requirePortalRoleAny(["Department Head", "Dean", "Faculty"]); // redirects to index.html if none of these roles
+  profile = requirePortalRoleAny(["Department Head", "Dean", "Faculty", "Student"]); // redirects to index.html if none of these roles
   if (!profile) return;
+  readOnly = profile.designation === "Student";
 
   const params = new URLSearchParams(window.location.search);
   courseId = params.get("course");
@@ -298,17 +321,19 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  $("saveBtn")?.addEventListener("click", handleSave);
-  $("addScheduleRowBtn")?.addEventListener("click", () => { scheduleRows.push({ date: "", topic: "" }); renderScheduleTable(); });
-  $("addOutcomeRowBtn")?.addEventListener("click", () => { outcomeRows.push({ outcome: "", output: "" }); renderOutcomeTable(); });
-  $("addAppendixBtn")?.addEventListener("click", () => { appendices.push({ id: newId(), text: "" }); renderAppendixList(); });
-  $("uploadHeaderLogoBtn")?.addEventListener("click", () => $("headerLogoFileInput")?.click());
-  $("headerLogoFileInput")?.addEventListener("change", handleHeaderLogoUpload);
-  $("removeHeaderLogoBtn")?.addEventListener("click", () => {
-    headerImageDataUrl = null;
-    $("headerLogoFileInput").value = "";
-    renderHeaderLogoPreview();
-  });
+  if (!readOnly) {
+    $("saveBtn")?.addEventListener("click", handleSave);
+    $("addScheduleRowBtn")?.addEventListener("click", () => { scheduleRows.push({ date: "", topic: "" }); renderScheduleTable(); });
+    $("addOutcomeRowBtn")?.addEventListener("click", () => { outcomeRows.push({ outcome: "", output: "" }); renderOutcomeTable(); });
+    $("addAppendixBtn")?.addEventListener("click", () => { appendices.push({ id: newId(), text: "" }); renderAppendixList(); });
+    $("uploadHeaderLogoBtn")?.addEventListener("click", () => $("headerLogoFileInput")?.click());
+    $("headerLogoFileInput")?.addEventListener("change", handleHeaderLogoUpload);
+    $("removeHeaderLogoBtn")?.addEventListener("click", () => {
+      headerImageDataUrl = null;
+      $("headerLogoFileInput").value = "";
+      renderHeaderLogoPreview();
+    });
+  }
 
   loadCourseGuide();
 });

@@ -9,6 +9,7 @@ function $(id) { return document.getElementById(id); }
 
 let profile = null;
 let courseId = null;
+let readOnly = false;
 let headerImageDataUrl = null; // base64 logo shown in the letterhead
 let clos = [];      // [{ id, text }] — as many as the user adds; column count in the plan table follows this
 let planRows = [];  // [{ topics, timeAllotment, cloChecks: { [cloId]: bool }, activities, assessments, references }]
@@ -103,7 +104,7 @@ function renderCloList() {
         <div class="flex items-start gap-2">
           <div class="font-mono text-xs font-semibold text-[#6B7060] pt-2 w-12 shrink-0">CLO${i + 1}</div>
           <textarea class="field-input clo-text-field border border-[#DEDACE] rounded px-2 py-1.5 flex-1" rows="1" placeholder="Describe this learning outcome…">${c.text || ""}</textarea>
-          <button type="button" data-id="${c.id}" class="clo-delete-btn text-[#B3432B] hover:opacity-70 pt-2" title="Remove CLO">✕</button>
+          <button type="button" data-id="${c.id}" class="clo-delete-btn text-[#B3432B] hover:opacity-70 pt-2" title="Remove CLO"><img src="ICON/delete.svg" class="w-3.5 h-3.5 inline" alt="Remove"></button>
         </div>
       `).join("")
     : `<div class="text-xs text-[#6B7060]">No CLOs yet — add the first one above.</div>`;
@@ -149,7 +150,7 @@ function renderPlanTable() {
       <td><textarea class="field-input plan-field" data-key="activities" rows="2">${row.activities || ""}</textarea></td>
       <td><textarea class="field-input plan-field" data-key="assessments" rows="2">${row.assessments || ""}</textarea></td>
       <td><textarea class="field-input plan-field" data-key="references" rows="2">${row.references || ""}</textarea></td>
-      <td class="text-center"><button type="button" class="row-delete-btn text-[#B3432B] hover:opacity-70" title="Remove row">✕</button></td>
+      <td class="text-center"><button type="button" class="row-delete-btn text-[#B3432B] hover:opacity-70" title="Remove row"><img src="ICON/delete.svg" class="w-3.5 h-3.5 inline" alt="Remove"></button></td>
     </tr>
   `).join("");
 
@@ -239,6 +240,12 @@ async function loadSyllabus() {
 
   renderForm(existing?.content || defaultContent(course));
 
+  if (readOnly) {
+    document.querySelectorAll(".field-input, .clo-check").forEach((el) => { el.disabled = true; });
+    document.querySelectorAll("#addRowBtn, #addCloBtn, .clo-delete-btn, .row-delete-btn, #uploadHeaderLogoBtn, #removeHeaderLogoBtn").forEach((el) => el.remove());
+    $("saveBtn")?.remove();
+  }
+
   $("loadingState").classList.add("hidden");
   $("appShell").classList.remove("hidden");
 }
@@ -248,11 +255,26 @@ async function handleSave() {
   btn.disabled = true;
   const original = btn.textContent;
   btn.textContent = "Saving…";
+
+  if (typeof BiometricSigner !== "undefined" && profile) {
+    const auth = await BiometricSigner.requireBiometricSignature({
+      user: profile,
+      actionTitle: `Save Syllabus (${profile.designation || "Authorized User"})`,
+      subtitle: "Biometric authentication required to save and authorize Syllabus."
+    });
+    if (!auth.success) {
+      showToast("Save cancelled: Biometric signature required.", true);
+      btn.disabled = false;
+      btn.textContent = original;
+      return;
+    }
+  }
+
   try {
     const { error } = await sb.rpc("upsert_syllabus", { p_course_id: courseId, p_content: collectContent() });
     if (error) throw error;
     $("saveStatus").textContent = `Saved ${new Date().toLocaleTimeString()}`;
-    showToast("Syllabus saved.");
+    showToast("Syllabus saved with biometric verification.");
   } catch (err) {
     console.error("Failed to save syllabus:", err);
     showToast(`Couldn't save: ${err.message || err}`, true);
@@ -264,8 +286,9 @@ async function handleSave() {
 // ── Startup ─────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
-  profile = requirePortalRoleAny(["Department Head", "Dean", "Faculty"]); // redirects to index.html if none of these roles
+  profile = requirePortalRoleAny(["Department Head", "Dean", "Faculty", "Student"]); // redirects to index.html if none of these roles
   if (!profile) return;
+  readOnly = profile.designation === "Student";
 
   const params = new URLSearchParams(window.location.search);
   courseId = params.get("course");
@@ -281,16 +304,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  $("saveBtn")?.addEventListener("click", handleSave);
-  $("addRowBtn")?.addEventListener("click", () => { planRows.push(blankRow()); renderPlanTable(); });
-  $("uploadHeaderLogoBtn")?.addEventListener("click", () => $("headerLogoFileInput")?.click());
-  $("headerLogoFileInput")?.addEventListener("change", handleHeaderLogoUpload);
-  $("removeHeaderLogoBtn")?.addEventListener("click", () => {
-    headerImageDataUrl = null;
-    $("headerLogoFileInput").value = "";
-    renderHeaderLogoPreview();
-  });
-  $("addCloBtn")?.addEventListener("click", () => { clos.push({ id: newCloId(), text: "" }); renderCloList(); renderPlanTable(); });
+  if (!readOnly) {
+    $("saveBtn")?.addEventListener("click", handleSave);
+    $("addRowBtn")?.addEventListener("click", () => { planRows.push(blankRow()); renderPlanTable(); });
+    $("uploadHeaderLogoBtn")?.addEventListener("click", () => $("headerLogoFileInput")?.click());
+    $("headerLogoFileInput")?.addEventListener("change", handleHeaderLogoUpload);
+    $("removeHeaderLogoBtn")?.addEventListener("click", () => {
+      headerImageDataUrl = null;
+      $("headerLogoFileInput").value = "";
+      renderHeaderLogoPreview();
+    });
+    $("addCloBtn")?.addEventListener("click", () => { clos.push({ id: newCloId(), text: "" }); renderCloList(); renderPlanTable(); });
+  }
 
   loadSyllabus();
 });

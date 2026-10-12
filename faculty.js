@@ -3,7 +3,7 @@
 //  Talks to Supabase via the `sb` client (supabaseClient.js)
 // ============================================================================
 
-const FORM_TYPES = ["Return of Assessment", "Attendance", "Course Guide", "Syllabus and Course Guide", "Acceptance of Course Guide"];
+const FORM_TYPES = ["Class Record", "Return of Assessment", "Attendance", "Course Guide", "Syllabus and Course Guide", "Acceptance of Course Guide"];
 
 let profile = null;       // set by session.js's requirePortalRole()
 let courses = [];         // courses_report rows where faculty_id = profile.id
@@ -68,11 +68,15 @@ async function loadDepartmentName() {
 // ── View switching ──────────────────────────────────────────────────────
 
 function showView(view) {
-  ["home", "courses", "forms", "students"].forEach((v) => $(`view-${v}`)?.classList.toggle("hidden", v !== view));
+  ["home", "courses", "forms", "attendance", "students"].forEach((v) => $(`view-${v}`)?.classList.toggle("hidden", v !== view));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   if (view === "home") renderHome();
   if (view === "courses") renderCoursesTable();
   if (view === "forms") renderForms();
+  if (view === "attendance") {
+    populateAttendanceCourses();
+    renderAttendanceSessions();
+  }
   if (view === "students") renderStudents();
 }
 
@@ -240,11 +244,20 @@ function renderForms() {
         <td class="px-4 py-3">
           <div class="flex items-center gap-2">
             ${isApproved ? "" : `<button class="form-save-btn text-xs font-semibold text-white bg-[#14432A] hover:bg-[#1B5636] px-3 py-1.5 rounded-lg transition">Save</button>`}
+            ${activeFormType === "Class Record"
+              ? `<a href="class-record.html?course=${c.id}" class="text-xs font-semibold text-[#8A6A0C] hover:underline whitespace-nowrap">Open Class Record →</a>`
+              : ""}
             ${activeFormType === "Syllabus and Course Guide"
               ? `<a href="syllabus.html?course=${c.id}" class="text-xs font-semibold text-[#8A6A0C] hover:underline whitespace-nowrap">Open Syllabus →</a>`
               : ""}
             ${activeFormType === "Course Guide"
               ? `<a href="course-guide.html?course=${c.id}" class="text-xs font-semibold text-[#8A6A0C] hover:underline whitespace-nowrap">Open Course Guide →</a>`
+              : ""}
+            ${activeFormType === "Acceptance of Course Guide"
+              ? `<a href="acceptance-of-course-guide.html?course=${c.id}" class="text-xs font-semibold text-[#8A6A0C] hover:underline whitespace-nowrap">Open Acceptance Roster →</a>`
+              : ""}
+            ${activeFormType === "Return of Assessment"
+              ? `<a href="return-of-assessment.html?course=${c.id}" class="text-xs font-semibold text-[#8A6A0C] hover:underline whitespace-nowrap">Open Return of Assessment →</a>`
               : ""}
           </div>
         </td>
@@ -260,6 +273,21 @@ function renderForms() {
       const remarks = row.querySelector(".form-remarks-input").value.trim();
       btn.disabled = true;
       btn.textContent = "Saving…";
+
+      if (status === "Submitted" && typeof BiometricSigner !== "undefined") {
+        const auth = await BiometricSigner.requireBiometricSignature({
+          user: profile,
+          actionTitle: `Submit ${activeFormType}`,
+          subtitle: `Biometric authentication required to submit ${activeFormType} for course evaluation.`
+        });
+        if (!auth.success) {
+          showToast("Submission cancelled: Biometric signature required.", true);
+          btn.disabled = false;
+          btn.textContent = "Save";
+          return;
+        }
+      }
+
       try {
         const { data, error } = await sb.rpc("upsert_form_submission", {
           p_course_id: courseId, p_requirement_type: activeFormType, p_status: status, p_remarks: remarks || null,
@@ -267,7 +295,7 @@ function renderForms() {
         if (error) throw error;
         formSubmissions = formSubmissions.filter((f) => !(f.course_id === courseId && f.requirement_type === activeFormType));
         formSubmissions.push(data);
-        showToast(`${activeFormType} status saved.`);
+        showToast(`${activeFormType} status saved with biometric verification.`);
         renderForms();
       } catch (err) {
         console.error("Failed to save form status:", err);
@@ -324,6 +352,7 @@ function initStudentSignaturePad() {
   $("studentUploadSignatureBtn")?.addEventListener("click", () => $("studentSignatureFileInput")?.click());
   $("studentSignatureFileInput")?.addEventListener("change", handleStudentSignatureUpload);
   $("studentFingerprintBtn")?.addEventListener("click", registerStudentFingerprint);
+  $("studentClearFingerprintBtn")?.addEventListener("click", clearStudentFingerprint);
 }
 
 function clearStudentSignaturePad() {
@@ -370,65 +399,77 @@ async function registerStudentFingerprint() {
   const icon = $("studentFingerprintIcon");
   const label = $("studentFingerprintLabel");
   const status = $("studentFingerprintStatus");
+  if (!btn) return;
+
   status.classList.remove("text-[#B3432B]");
 
-  if (!window.PublicKeyCredential) {
-    status.textContent = "Biometric registration isn't supported in this browser.";
+  if (typeof ZKTeco === "undefined") {
+    status.textContent = "ZKTeco client library not found.";
     status.classList.add("text-[#B3432B]");
     return;
   }
-  try {
-    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if (!available) {
-      status.textContent = "No fingerprint or biometric sensor detected on this device.";
-      status.classList.add("text-[#B3432B]");
-      return;
+
+  const lastName = $("studentLastName")?.value.trim() || "";
+  const firstName = $("studentFirstName")?.value.trim() || "";
+  const studentUsername = $("studentUsername")?.value.trim() || `${firstName}.${lastName}`.toLowerCase() || "student";
+
+  ZKTeco.openEnrollmentModal({
+    username: studentUsername,
+    onComplete: (result) => {
+      studentFingerprintCredentialId = result.template;
+
+      if (icon) {
+        if (icon.tagName === "IMG") icon.src = "ICON/biometric.svg";
+        else icon.textContent = "";
+      }
+      if (label) label.textContent = "Fingerprint Enrolled";
+      if (status) {
+        status.textContent = `Live20R biometric template captured (${result.quality}% quality).`;
+        status.classList.remove("text-[#B3432B]");
+      }
+
+      // Show preview thumbnail
+      const previewRow = $("studentFingerprintPreviewRow");
+      const previewImg = $("studentFingerprintPreviewImg");
+      if (previewRow && previewImg && result.image) {
+        previewImg.src = result.image;
+        previewRow.classList.remove("hidden");
+      }
+
+      if (btn) btn.classList.add("bg-[#FAF7EF]");
+      showToast("Student fingerprint enrolled on Live20R.");
+    },
+    onError: (err) => {
+      console.warn("Biometric enrollment error:", err);
+      if (status) {
+        status.textContent = err.message || "Could not complete Live20R enrollment.";
+        status.classList.add("text-[#B3432B]");
+      }
     }
-    icon.textContent = "⏳"; label.textContent = "Scanning…";
-    status.textContent = "Follow your device prompt to scan the fingerprint.";
-
-    const lastName = $("studentLastName")?.value.trim() || "";
-    const firstName = $("studentFirstName")?.value.trim() || "";
-
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rp: { name: "Faculty Portal" },
-        user: {
-          id: crypto.getRandomValues(new Uint8Array(16)),
-          name: `${firstName}.${lastName}`.toLowerCase() || "pending-student",
-          displayName: `${firstName} ${lastName}`.trim() || "New student",
-        },
-        pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-        timeout: 60000,
-        attestation: "none",
-      },
-    });
-
-    studentFingerprintCredentialId = credential.id;
-    icon.textContent = "✅"; label.textContent = "Fingerprint Registered";
-    status.textContent = "Biometric credential captured for this student.";
-    btn.disabled = true;
-    btn.classList.add("opacity-70", "cursor-not-allowed");
-  } catch (err) {
-    icon.textContent = "🔒"; label.textContent = "Register Fingerprint";
-    status.textContent = err.name === "NotAllowedError" ? "Fingerprint registration was cancelled." : "Could not register fingerprint. Please try again.";
-    status.classList.add("text-[#B3432B]");
-  }
+  });
 }
 
-function resetStudentIdentityCapture() {
-  clearStudentSignaturePad();
+function clearStudentFingerprint() {
   studentFingerprintCredentialId = null;
   const btn = $("studentFingerprintBtn");
   const icon = $("studentFingerprintIcon");
   const label = $("studentFingerprintLabel");
   const status = $("studentFingerprintStatus");
-  if (btn) { btn.disabled = false; btn.classList.remove("opacity-70", "cursor-not-allowed"); }
-  if (icon) icon.textContent = "🔒";
+  const previewRow = $("studentFingerprintPreviewRow");
+
+  if (btn) { btn.classList.remove("bg-[#FAF7EF]"); }
+  if (icon) {
+    if (icon.tagName === "IMG") icon.src = "ICON/biometric.svg";
+    else icon.textContent = "";
+  }
   if (label) label.textContent = "Register Fingerprint";
   if (status) { status.textContent = "Not yet registered"; status.classList.remove("text-[#B3432B]"); }
+  if (previewRow) previewRow.classList.add("hidden");
+}
+
+function resetStudentIdentityCapture() {
+  clearStudentSignaturePad();
+  clearStudentFingerprint();
 }
 
 function showStudentError(field, msg) {
@@ -523,14 +564,32 @@ function renderStudents() {
       <td class="px-4 py-3 flex items-center gap-2.5">
         <div class="w-7 h-7 rounded-full text-white text-[10px] font-bold font-display flex items-center justify-center shrink-0 bg-[#1F6F4A]">${initials(s.first_name, s.last_name)}</div>
         ${formatName(s)}
-        ${s.esignature ? '<span title="Signature on file" class="text-xs">✎</span>' : ""}
-        ${s.fingerprint_credential_id ? '<span title="Biometric on file" class="text-xs">🔒</span>' : ""}
+        ${s.esignature ? '<img src="ICON/signature.svg" class="w-4 h-4 inline-block text-[#14432A]" title="Signature on file">' : ""}
+        ${s.fingerprint_credential_id ? '<img src="ICON/biometric.svg" class="w-4 h-4 inline-block text-[#14432A]" title="Biometric on file">' : ""}
       </td>
       <td class="px-4 py-3">${s.section_name || s.section || "—"}</td>
       <td class="px-4 py-3 text-[#6B7060]">${fmtDate(s.created_at)}</td>
-      <td class="px-4 py-3"><button data-id="${s.id}" class="student-delete-btn text-[#B3432B] hover:opacity-70">🗑</button></td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-1.5">
+          <button data-id="${s.id}" class="student-id-card-btn inline-flex items-center gap-1 text-[#14432A] hover:bg-[#FAF7EF] text-xs font-semibold bg-white border border-[#DEDACE] px-2.5 py-1 rounded-md transition shadow-2xs" title="View Student ID & QR Code">
+            <img src="ICON/qr.svg" class="w-3.5 h-3.5"> ID & QR
+          </button>
+          <button data-id="${s.id}" class="student-delete-btn inline-flex items-center gap-1 text-[#B3432B] hover:opacity-70 text-xs font-semibold bg-[#FBEAE4] px-2.5 py-1 rounded-md" title="Delete student">
+            <img src="ICON/delete.svg" class="w-3.5 h-3.5"> Delete
+          </button>
+        </div>
+      </td>
     </tr>
   `).join("");
+
+  body.querySelectorAll(".student-id-card-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const student = students.find((x) => String(x.id) === String(btn.dataset.id));
+      if (student && typeof QRClient !== "undefined") {
+        QRClient.openIdCardModal({ user: student });
+      }
+    });
+  });
 
   body.querySelectorAll(".student-delete-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -545,10 +604,275 @@ function renderStudents() {
   });
 }
 
+// ── Class Attendance & Live20R Biometrics ──────────────────────────────
+
+function populateAttendanceCourses() {
+  const sel = $("attCourseSelect");
+  if (!sel) return;
+
+  sel.innerHTML = courses.map((c) => `
+    <option value="${c.id}" data-days="${c.days || ""}" data-start="${c.start_time || ""}" data-end="${c.end_time || ""}">
+      ${c.course_number} — ${c.course_description} (${c.section_name || "Section"})
+    </option>
+  `).join("");
+
+  const updateTimesForSelectedCourse = () => {
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt) return;
+    const start = opt.dataset.start ? opt.dataset.start.substring(0, 5) : "08:00";
+    const end = opt.dataset.end ? opt.dataset.end.substring(0, 5) : "09:30";
+    $("attStartTime").value = start;
+    $("attEndTime").value = end;
+  };
+
+  sel.addEventListener("change", updateTimesForSelectedCourse);
+  updateTimesForSelectedCourse();
+
+  // Set default date to today
+  $("attDate").value = new Date().toISOString().split("T")[0];
+}
+
+function handleScheduleSession(e) {
+  e.preventDefault();
+  const sel = $("attCourseSelect");
+  const courseId = sel.value;
+  const course = courses.find((c) => c.id === courseId);
+  const date = $("attDate").value;
+  const startTime = $("attStartTime").value;
+  const endTime = $("attEndTime").value;
+
+  if (startTime >= endTime) {
+    showToast("End time must be after start time.", true);
+    return;
+  }
+
+  const session = AttendanceManager.createSession({
+    courseId,
+    courseNumber: course?.course_number,
+    courseTitle: course?.course_description,
+    facultyId: profile.id,
+    date,
+    startTime,
+    endTime,
+    topic: `Class Session - ${course?.course_number || ""}`
+  });
+
+  showToast(`Attendance window opened for ${course?.course_number || "Class"} (${startTime} - ${endTime})!`);
+  renderAttendanceSessions();
+}
+
+function renderAttendanceSessions() {
+  const listEl = $("attendanceSessionsList");
+  const emptyEl = $("attendanceSessionsEmpty");
+  if (!listEl || !emptyEl) return;
+
+  const courseIds = new Set(courses.map((c) => c.id));
+  const sessions = AttendanceManager.getSessions().filter((s) => courseIds.has(s.course_id));
+
+  if (sessions.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.classList.remove("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+
+  listEl.innerHTML = sessions.map((sess) => {
+    const timeStatus = AttendanceManager.getSessionTimeStatus(sess);
+    const logs = AttendanceManager.getLogs(sess.id);
+
+    const attendeesHtml = logs.length === 0
+      ? `<div class="text-xs text-[#8A8D93] italic py-2">No students have scanned in for this session yet.</div>`
+      : `
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse bg-white rounded-lg border border-[#E3DFC8]">
+            <thead>
+              <tr class="bg-[#FAF7EF] text-[11px] text-[#52555C] border-b border-[#E3DFC8]">
+                <th class="px-3 py-1.5">#</th>
+                <th class="px-3 py-1.5">Student Name</th>
+                <th class="px-3 py-1.5">Student No.</th>
+                <th class="px-3 py-1.5">Time Logged</th>
+                <th class="px-3 py-1.5 text-center">Verification</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logs.map((l, i) => `
+                <tr class="border-b border-[#F0EDDE]">
+                  <td class="px-3 py-1.5 text-center">${i + 1}</td>
+                  <td class="px-3 py-1.5 font-medium">${l.student_name}</td>
+                  <td class="px-3 py-1.5 font-mono text-[#52555C]">${l.student_number || "—"}</td>
+                  <td class="px-3 py-1.5 text-[#14432A] font-semibold">${l.time_label || fmtTime(l.timestamp?.split("T")[1]?.substring(0, 5))}</td>
+                  <td class="px-3 py-1.5 text-center">
+                    <span class="bg-[#E1EEE6] text-[#1F6F4A] text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Live20R Match</span>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+    return `
+      <div class="border border-[#E3DFC8] bg-[#FAF7EF]/40 rounded-xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div>
+            <div class="font-bold text-sm text-[#14432A]">${sess.course_number} — ${sess.course_title}</div>
+            <div class="text-xs text-[#6B7060] mt-0.5 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1"><img src="ICON/calendar.svg" class="w-3.5 h-3.5 opacity-70">${sess.date}</span>
+              <span>·</span>
+              <span class="inline-flex items-center gap-1"><img src="ICON/clock.svg" class="w-3.5 h-3.5 opacity-70">${fmtTime(sess.start_time)} – ${fmtTime(sess.end_time)}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${timeStatus.color}">${timeStatus.label}</span>
+            ${sess.status === "Open"
+              ? `<button type="button" onclick="closeSessionById('${sess.id}')" class="text-xs bg-[#B3432B] hover:bg-red-700 text-white px-2.5 py-1 rounded-lg transition font-semibold">Close Window</button>`
+              : `<span class="text-xs text-[#8A8D93]">Window Locked</span>`
+            }
+            <button type="button" onclick="deleteSessionById('${sess.id}')" class="inline-flex items-center gap-1 text-xs text-[#B3432B] hover:opacity-70 bg-[#FBEAE4] px-2 py-1 rounded-md font-semibold" title="Delete Session">
+              <img src="ICON/delete.svg" class="w-3.5 h-3.5"> Delete
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-[#EFEBDB]">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-semibold text-[#14432A]">Attended Students (${logs.length})</div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="launchKioskForSession('${sess.id}')" class="inline-flex items-center gap-1 text-xs text-[#1F6F4A] hover:underline font-bold">
+                <img src="ICON/biometric.svg" class="w-3.5 h-3.5"> Live20R
+              </button>
+              <span class="text-[#DEDACE]">·</span>
+              <button type="button" onclick="launchQrScannerForSession('${sess.id}')" class="inline-flex items-center gap-1 text-xs text-[#14432A] hover:underline font-bold">
+                <img src="ICON/qr.svg" class="w-3.5 h-3.5"> Scan QR ID
+              </button>
+            </div>
+          </div>
+          ${attendeesHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function closeSessionById(id) {
+  AttendanceManager.closeSession(id);
+  renderAttendanceSessions();
+  showToast("Attendance session closed.");
+}
+
+function deleteSessionById(id) {
+  if (!confirm("Delete this attendance session and its logs?")) return;
+  AttendanceManager.deleteSession(id);
+  renderAttendanceSessions();
+  showToast("Session deleted.");
+}
+
+async function launchQrScannerForSession(sessionId) {
+  const session = AttendanceManager.getSessions().find((s) => s.id === sessionId);
+  if (!session) return;
+
+  const course = courses.find((c) => c.id === session.course_id);
+  if (!course) return;
+
+  let candidates = [];
+  try {
+    const { data } = await sb.from("students_report").select("id, first_name, last_name, student_number").eq("section_id", course.section_id);
+    candidates = data || [];
+  } catch (e) {
+    console.error("Error fetching students:", e);
+  }
+
+  if (typeof QRClient === "undefined") {
+    showToast("QR Client library is not loaded.", true);
+    return;
+  }
+
+  QRClient.openScannerModal({
+    title: `QR Attendance: ${session.course_number}`,
+    subtitle: `Point camera at student's ESSU Digital ID card or mobile QR code.`,
+    candidates: candidates,
+    onMatch: (matchedCandidate, payload) => {
+      const studentId = matchedCandidate?.id || payload.id;
+      const studentNum = matchedCandidate?.student_number || payload.id_num || "";
+      const studentName = matchedCandidate?.first_name
+        ? `${matchedCandidate.last_name}, ${matchedCandidate.first_name}`
+        : (payload.name || `Student #${studentId}`);
+
+      const res = AttendanceManager.logAttendance({
+        sessionId: session.id,
+        courseId: session.course_id,
+        studentId: studentId,
+        studentNumber: studentNum,
+        studentName: studentName,
+        method: "QR Code"
+      });
+
+      if (res.duplicate) {
+        showToast(`${studentName} was already logged for this session.`);
+      } else {
+        showToast(`✓ Attendance logged via QR for ${studentName}!`);
+      }
+      renderAttendanceSessions();
+    }
+  });
+}
+
+async function launchKioskForSession(sessionId) {
+  const session = AttendanceManager.getSessions().find((s) => s.id === sessionId);
+  if (!session) return;
+
+  const course = courses.find((c) => c.id === session.course_id);
+  if (!course) return;
+
+  // Load candidate students for this section
+  let candidates = [];
+  try {
+    const { data } = await sb.from("students_report").select("id, first_name, last_name, student_number, fingerprint_credential_id, fingerprint_template").eq("section_id", course.section_id);
+    candidates = (data || []).filter((s) => s.fingerprint_template || s.fingerprint_credential_id);
+  } catch (e) {
+    console.error("Error fetching students:", e);
+  }
+
+  if (candidates.length === 0) {
+    // If no fingerprints registered, offer QR scanner immediately!
+    launchQrScannerForSession(sessionId);
+    return;
+  }
+
+  if (typeof ZKTeco === "undefined") {
+    launchQrScannerForSession(sessionId);
+    return;
+  }
+
+  ZKTeco.openVerifyModal({
+    title: `Class Attendance: ${session.course_number}`,
+    prompt: "Student: Place your finger on the Live20R scanner or switch to QR reader.",
+    candidates: candidates.map((s) => ({
+      id: s.id,
+      label: `${s.last_name}, ${s.first_name} (${s.student_number || "No ID"})`,
+      first_name: s.first_name,
+      last_name: s.last_name,
+      student_number: s.student_number,
+      template: s.fingerprint_template || s.fingerprint_credential_id
+    })),
+    onMatch: (matchedCandidate) => {
+      AttendanceManager.logAttendance({
+        sessionId: session.id,
+        courseId: session.course_id,
+        studentId: matchedCandidate.id,
+        studentNumber: matchedCandidate.student_number,
+        studentName: `${matchedCandidate.last_name}, ${matchedCandidate.first_name}`
+      });
+      showToast(`✓ Attendance logged for ${matchedCandidate.first_name} ${matchedCandidate.last_name}!`);
+      renderAttendanceSessions();
+    }
+  });
+}
+
 // ── Startup ─────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
-  profile = requirePortalRole("Faculty"); // redirects to index.html if not signed in as Faculty
+  profile = requirePortalRole("Faculty");
   if (!profile) return;
 
   if (typeof sb === "undefined") {
@@ -562,5 +886,94 @@ document.addEventListener("DOMContentLoaded", () => {
     $("studentTempPassword").value = randomPassword();
   });
 
+  $("scheduleSessionForm")?.addEventListener("submit", handleScheduleSession);
+  $("launchKioskBtn")?.addEventListener("click", () => {
+    const sel = $("attCourseSelect");
+    const activeSessions = AttendanceManager.getSessions(sel?.value).filter((s) => s.status === "Open");
+    if (activeSessions.length > 0) {
+      launchKioskForSession(activeSessions[0].id);
+    } else {
+      showToast("Please open a scheduled session first to launch scanner kiosk.", true);
+    }
+  });
+
+  $("launchQrKioskBtn")?.addEventListener("click", () => {
+    const sel = $("attCourseSelect");
+    const activeSessions = AttendanceManager.getSessions(sel?.value).filter((s) => s.status === "Open");
+    if (activeSessions.length > 0) {
+      launchQrScannerForSession(activeSessions[0].id);
+    } else {
+      showToast("Please open a scheduled session first to launch QR scanner kiosk.", true);
+    }
+  });
+
+  // Dual option switching for Student Registration Credential
+  $("tabBioSelectBtn")?.addEventListener("click", () => {
+    $("studentBioPanel")?.classList.remove("hidden");
+    $("studentQrPanel")?.classList.add("hidden");
+    $("tabBioSelectBtn")?.classList.add("bg-[#14432A]", "text-white");
+    $("tabBioSelectBtn")?.classList.remove("text-[#14432A]");
+    $("tabQrSelectBtn")?.classList.remove("bg-[#14432A]", "text-white");
+    $("tabQrSelectBtn")?.classList.add("text-[#14432A]");
+  });
+
+  $("tabQrSelectBtn")?.addEventListener("click", () => {
+    $("studentQrPanel")?.classList.remove("hidden");
+    $("studentBioPanel")?.classList.add("hidden");
+    $("tabQrSelectBtn")?.classList.add("bg-[#14432A]", "text-white");
+    $("tabQrSelectBtn")?.classList.remove("text-[#14432A]");
+    $("tabBioSelectBtn")?.classList.remove("bg-[#14432A]", "text-white");
+    $("tabBioSelectBtn")?.classList.add("text-[#14432A]");
+
+    // Render live QR Code in student registration panel
+    const fName = $("studentFirstName")?.value.trim() || "Student";
+    const lName = $("studentLastName")?.value.trim() || "Sample";
+    const uName = $("studentUsername")?.value.trim() || "student.sample";
+    const dummyStudent = {
+      id: "preview-" + Date.now(),
+      first_name: fName,
+      last_name: lName,
+      username: uName,
+      designation: "Student",
+      role: "student",
+      campus_name: profile.campus_name || "Main Campus"
+    };
+    if (typeof QRClient !== "undefined") {
+      const container = $("studentRegQrContainer");
+      if (container) {
+        const payload = QRClient.getUserQrPayload(dummyStudent);
+        container.innerHTML = QRClient.generateSvg(payload, { size: 84, margin: 1 });
+      }
+    }
+  });
+
+  $("studentPreviewIdCardBtn")?.addEventListener("click", () => {
+    const fName = $("studentFirstName")?.value.trim() || "Student";
+    const lName = $("studentLastName")?.value.trim() || "Sample";
+    const uName = $("studentUsername")?.value.trim() || "student.sample";
+    const secSelect = $("studentSectionSelect");
+    const secName = secSelect?.options[secSelect.selectedIndex]?.text || "Section";
+    const dummyStudent = {
+      id: "preview-" + Date.now(),
+      first_name: fName,
+      last_name: lName,
+      username: uName,
+      student_number: "2024-" + Math.floor(10000 + Math.random() * 90000),
+      designation: "Student",
+      role: "student",
+      section_name: secName,
+      campus_name: profile.campus_name || "Main Campus"
+    };
+    if (typeof QRClient !== "undefined") {
+      QRClient.openIdCardModal({ user: dummyStudent });
+    }
+  });
+
+  $("studentSampleIdsBtn")?.addEventListener("click", () => {
+    if (typeof QRClient !== "undefined") {
+      QRClient.openSampleSchoolIdModal("student");
+    }
+  });
+
   enterApp();
-});
+});
