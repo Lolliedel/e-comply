@@ -584,6 +584,10 @@ function renderProfile(s) {
     ? `<img src="${s.profile_picture}" class="w-full h-full object-cover rounded-full">`
     : (initials(s.first_name, s.last_name) || "—");
   $("fullName").textContent = `${s.last_name}, ${s.first_name}`;
+  if ($("studentIdBadge")) {
+    const sNum = s.student_number || s.student_no;
+    $("studentIdBadge").textContent = sNum ? `Student ID: ${sNum}` : `ID #${s.id}`;
+  }
   $("section").textContent = s.section_name || s.section || "No section on file";
   $("headerDept").textContent = s.department || "No department assigned";
 

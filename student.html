@@ -40,9 +40,12 @@
 
   <div class="bg-white border border-[#E3DFC8] rounded-xl p-6 mb-5">
     <div class="flex items-center gap-4 mb-5">
-      <div id="avatar" class="w-14 h-14 rounded-full bg-[#1F6F4A] text-white flex items-center justify-center font-display font-bold text-xl overflow-hidden">—</div>
+      <div id="avatar" class="w-14 h-14 rounded-full bg-[#1F6F4A] text-white flex items-center justify-center font-display font-bold text-xl overflow-hidden border-2 border-[#D9A62C]/40 shadow-xs">—</div>
       <div>
-        <div id="fullName" class="font-display text-lg font-semibold">—</div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="fullName" class="font-display text-lg font-semibold">—</span>
+          <span id="studentIdBadge" class="font-mono text-xs font-bold text-[#14432A] bg-[#FAF7EF] px-2.5 py-0.5 rounded-full border border-[#DEDACE]">ID #—</span>
+        </div>
         <div class="text-sm text-[#6B7060] flex items-center gap-2 flex-wrap mt-0.5">
           <span id="studentCourseBadge" class="hidden px-2 py-0.5 rounded bg-[#14432A]/10 text-[#14432A] font-semibold text-xs"></span>
           <span id="section">—</span>

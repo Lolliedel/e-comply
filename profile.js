@@ -254,6 +254,34 @@ function renderForm() {
   $("usernameDisplay").textContent = record.username || "—";
   if ($("campusDisplay")) $("campusDisplay").textContent = record.campus_name || record.campus || profile.campus_name || "Main Campus";
   $("designationDisplay").textContent = profile.designation;
+
+  // Entity ID computation & visibility
+  const rawId = record.id || profile.id;
+  const studentNum = record.student_number || record.student_no || null;
+  const employeeNum = record.employee_id || record.employee_no || null;
+  const primaryIdDisplay = isStudent
+    ? (studentNum ? studentNum : `ESSU-STU-${rawId}`)
+    : (employeeNum ? employeeNum : `#${rawId}`);
+
+  if ($("profileEntityIdPill")) {
+    $("profileEntityIdPill").textContent = isStudent
+      ? `Student ID: ${primaryIdDisplay}`
+      : `ID #${rawId}`;
+  }
+  if ($("accountInfoIdLabel")) {
+    $("accountInfoIdLabel").textContent = isStudent ? "Student ID" : "Entity / User ID";
+  }
+  if ($("accountInfoIdDisplay")) {
+    $("accountInfoIdDisplay").textContent = isStudent
+      ? (studentNum ? `${studentNum} (DB #${rawId})` : `ESSU-STU-${rawId}`)
+      : `#${rawId}${employeeNum ? ` (${employeeNum})` : ""}`;
+  }
+  if ($("profileQrIdBadge")) {
+    $("profileQrIdBadge").textContent = isStudent
+      ? `Student ID: ${primaryIdDisplay}`
+      : `User ID: #${rawId}`;
+  }
+
   let studentCoursePart = "";
   if (isStudent) {
     try {

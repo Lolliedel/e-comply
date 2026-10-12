@@ -179,25 +179,26 @@ function renderPersonnel() {
   if (!body) return;
 
   body.innerHTML = filtered.length === 0
-    ? `<tr><td colspan="6" class="text-center py-6 text-sm text-[#6B7060]">No campus personnel found.</td></tr>`
+    ? `<tr><td colspan="7" class="text-center py-6 text-sm text-[#6B7060]">No campus personnel found.</td></tr>`
     : filtered.map((u) => `
-        <tr class="border-b border-[#EFEBDB] hover:bg-[#FBF9F0]">
-          <td class="px-4 py-3 flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-full text-white text-[10px] font-bold font-display flex items-center justify-center shrink-0 bg-[#1F6F4A]">${initials(u.first_name, u.last_name)}</div>
-            <div>
-              <div class="font-semibold text-sm">${formatName(u)}</div>
+        <tr class="border-b border-[#EFEBDB] hover:bg-[#FBF9F0] transition">
+          <td class="px-3.5 py-3 font-mono text-xs font-semibold text-[#6B7060] whitespace-nowrap">${u.id}</td>
+          <td class="px-3.5 py-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-7 h-7 rounded-full text-white text-[10px] font-bold font-display flex items-center justify-center shrink-0 bg-[#1F6F4A]">${initials(u.first_name, u.last_name)}</div>
+              <span class="font-semibold text-sm whitespace-nowrap">${formatName(u)}</span>
             </div>
           </td>
-          <td class="px-4 py-3">
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FBF3D9] text-[#8A6A0C]">${u.designation}</span>
+          <td class="px-3.5 py-3 whitespace-nowrap">
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FBF3D9] text-[#8A6A0C] inline-block">${u.designation}</span>
           </td>
-          <td class="px-4 py-3 text-xs text-[#52555C]">${u.college || u.department || "—"}</td>
-          <td class="px-4 py-3 font-mono text-xs text-[#6B7060]">${u.username ? "@" + u.username : "—"}</td>
-          <td class="px-4 py-3">
+          <td class="px-3.5 py-3 text-xs text-[#52555C] whitespace-nowrap">${u.college || u.department || "—"}</td>
+          <td class="px-3.5 py-3 font-mono text-xs text-[#6B7060] whitespace-nowrap">${u.username ? "@" + u.username : "—"}</td>
+          <td class="px-3.5 py-3 whitespace-nowrap">
             <span class="text-xs font-semibold text-[#1F6F4A]">Active</span>
           </td>
-          <td class="px-4 py-3 text-right">
-            <button onclick="viewCampusUserQr('${u.id}', '${u.type}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border border-[#DEDACE] bg-white hover:bg-[#FAF7EF] text-[#14432A] transition">
+          <td class="px-3.5 py-3 text-right whitespace-nowrap">
+            <button onclick="viewCampusUserQr('${u.id}', '${u.type}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border border-[#DEDACE] bg-white hover:bg-[#FAF7EF] text-[#14432A] transition whitespace-nowrap shrink-0">
               <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt="">
               <span>ID &amp; QR</span>
             </button>

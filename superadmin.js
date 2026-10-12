@@ -2467,35 +2467,39 @@ function renderReports() {
   empty.classList.add("hidden");
 
   body.innerHTML = filtered.map((u) => `
-    <tr class="border-b border-[#EFEBDB] hover:bg-[#FBF9F0]">
-      <td class="px-4 py-3 font-mono text-[#6B7060]">${u.id}</td>
-      <td class="px-4 py-3 flex items-center gap-2.5">
-        <div class="w-7 h-7 rounded-full text-white text-[10px] font-bold font-display flex items-center justify-center shrink-0 bg-[#1F6F4A]">${initials(u.first_name, u.last_name)}</div>
-        ${formatName(u)}
-        ${u.esignature ? '<img src="ICON/signature.svg" class="w-4 h-4 inline-block text-[#14432A]" title="Signature on file">' : ""}
-        ${u.fingerprint_credential_id ? '<img src="ICON/biometric.svg" class="w-4 h-4 inline-block text-[#14432A]" title="Biometric on file">' : ""}
+    <tr class="border-b border-[#EFEBDB] hover:bg-[#FBF9F0] transition">
+      <td class="px-3.5 py-3 font-mono text-xs font-semibold text-[#6B7060] whitespace-nowrap">${u.id}</td>
+      <td class="px-3.5 py-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-7 h-7 rounded-full text-white text-[10px] font-bold font-display flex items-center justify-center shrink-0 bg-[#1F6F4A]">${initials(u.first_name, u.last_name)}</div>
+          <span class="font-medium text-[#1B2116] whitespace-nowrap">${formatName(u)}</span>
+          <span class="inline-flex items-center gap-1 shrink-0">
+            ${u.esignature ? '<img src="ICON/signature.svg" class="w-3.5 h-3.5 inline-block text-[#14432A]" title="Signature on file">' : ""}
+            ${u.fingerprint_credential_id ? '<img src="ICON/biometric.svg" class="w-3.5 h-3.5 inline-block text-[#14432A]" title="Biometric on file">' : ""}
+          </span>
+        </div>
       </td>
-      <td class="px-4 py-3 font-semibold text-[#14432A]">${u.campus_name || u.campus || "Main Campus"}</td>
-      <td class="px-4 py-3">${u.college || "—"}</td>
-      <td class="px-4 py-3">${u.department || "—"}${u.section_name ? ` (${u.section_name})` : ""}</td>
-      <td class="px-4 py-3">
-        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FBF3D9] text-[#8A6A0C]">${u.designation}</span>
-        ${u.is_affiliate ? '<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E5EDF9] text-[#1E40AF] ml-1">Affiliate</span>' : ''}
+      <td class="px-3.5 py-3 font-semibold text-[#14432A] whitespace-nowrap">${u.campus_name || u.campus || "Main Campus"}</td>
+      <td class="px-3.5 py-3 text-xs text-[#52555C] whitespace-nowrap">${u.college || "—"}</td>
+      <td class="px-3.5 py-3 text-xs text-[#52555C] whitespace-nowrap">${u.department || "—"}${u.section_name ? ` (${u.section_name})` : ""}</td>
+      <td class="px-3.5 py-3 whitespace-nowrap">
+        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FBF3D9] text-[#8A6A0C] inline-block">${u.designation}</span>
+        ${u.is_affiliate ? '<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E5EDF9] text-[#1E40AF] ml-1 inline-block">Affiliate</span>' : ''}
       </td>
-      <td class="px-4 py-3 font-mono text-[#6B7060]">${u.username ? "@" + u.username : "—"}</td>
-      <td class="px-4 py-3">${!u.username ? `<span class="text-xs font-semibold text-[#8A8D93]">Record only</span>` : u.must_change_password
+      <td class="px-3.5 py-3 font-mono text-xs text-[#6B7060] whitespace-nowrap">${u.username ? "@" + u.username : "—"}</td>
+      <td class="px-3.5 py-3 whitespace-nowrap">${!u.username ? `<span class="text-xs font-semibold text-[#8A8D93]">Record only</span>` : u.must_change_password
         ? `<span class="text-xs font-semibold text-[#B3432B]">First-login pending</span>`
         : `<span class="text-xs font-semibold text-[#1F6F4A]">Active</span>`}</td>
-      <td class="px-4 py-3 text-[#6B7060]">${u.created_at ? fmtDate(u.created_at) : "—"}</td>
-      <td class="px-4 py-3">
-        <div class="flex items-center gap-1.5">
-          <button data-id="${u.id}" data-type="${u.account_type}" class="user-id-card-btn inline-flex items-center gap-1 text-xs font-semibold text-[#14432A] hover:bg-[#FAF7EF] bg-white border border-[#DEDACE] px-2 py-1 rounded-md transition shadow-2xs" title="View Digital ID & QR Code">
-            <img src="ICON/qr.svg" class="w-3.5 h-3.5"> ID & QR
+      <td class="px-3.5 py-3 text-xs text-[#6B7060] whitespace-nowrap">${u.created_at ? fmtDate(u.created_at) : "—"}</td>
+      <td class="px-3.5 py-3 text-right whitespace-nowrap">
+        <div class="inline-flex items-center justify-end gap-1.5 shrink-0">
+          <button data-id="${u.id}" data-type="${u.account_type}" class="user-id-card-btn inline-flex items-center gap-1 text-xs font-semibold text-[#14432A] hover:bg-[#FAF7EF] bg-white border border-[#DEDACE] px-2 py-1 rounded-md transition shadow-2xs whitespace-nowrap shrink-0" title="View Digital ID & QR Code">
+            <img src="ICON/qr.svg" class="w-3.5 h-3.5"> ID &amp; QR
           </button>
-          <button data-id="${u.id}" data-type="${u.account_type}" class="user-edit-btn inline-flex items-center gap-1 text-xs font-semibold text-[#8A6A0C] hover:underline bg-[#FBF3D9] px-2.5 py-1 rounded-md">
+          <button data-id="${u.id}" data-type="${u.account_type}" class="user-edit-btn inline-flex items-center gap-1 text-xs font-semibold text-[#8A6A0C] hover:underline bg-[#FBF3D9] px-2.5 py-1 rounded-md transition whitespace-nowrap shrink-0">
             <img src="ICON/edit.svg" class="w-3.5 h-3.5"> Edit
           </button>
-          <button data-id="${u.id}" data-type="${u.account_type}" class="user-delete-btn inline-flex items-center gap-1 text-[#B3432B] hover:opacity-70 text-xs font-semibold bg-[#FBEAE4] px-2.5 py-1 rounded-md" title="Delete account">
+          <button data-id="${u.id}" data-type="${u.account_type}" class="user-delete-btn inline-flex items-center gap-1 text-[#B3432B] hover:opacity-70 text-xs font-semibold bg-[#FBEAE4] px-2.5 py-1 rounded-md transition whitespace-nowrap shrink-0" title="Delete account">
             <img src="ICON/delete.svg" class="w-3.5 h-3.5"> Delete
           </button>
         </div>
