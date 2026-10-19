@@ -300,7 +300,7 @@ async function handleQrLogin() {
       if (errEl) errEl.classList.add("hidden");
       try {
         const parsed = QRClient.parseUserQr(decodedText);
-        const queryTerm = (parsed?.id || parsed?.student_number || parsed?.employee_id || decodedText).trim();
+        const queryTerm = (parsed?.id || parsed?.id_num || parsed?.student_number || parsed?.employee_id || decodedText).trim();
 
         if (!queryTerm) {
           throw new Error("Scanned QR code does not contain a valid ESSU credential.");
@@ -317,6 +317,7 @@ async function handleQrLogin() {
                 targetUser = staffList.find(u => 
                   String(u.id) === String(queryTerm) || 
                   (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
+                  (parsed?.username && u.username && u.username.toLowerCase() === parsed.username.toLowerCase()) ||
                   (parsed?.id && String(u.id) === String(parsed.id))
                 );
                 if (targetUser) targetUser.role = "staff";
@@ -331,11 +332,13 @@ async function handleQrLogin() {
         if (!targetUser && (!parsed || parsed.role !== "staff")) {
           try {
             if (typeof sb !== "undefined" && sb && sb.from) {
-              const { data: studentList } = await sb.from("students").select("id, first_name, last_name, section_id, college_id, department_id, username");
+              const { data: studentList } = await sb.from("students").select("id, first_name, last_name, section_id, college_id, department_id, username, student_number");
               if (studentList) {
                 targetUser = studentList.find(s => 
                   String(s.id) === String(queryTerm) || 
                   (s.username && s.username.toLowerCase() === queryTerm.toLowerCase()) ||
+                  (parsed?.username && s.username && s.username.toLowerCase() === parsed.username.toLowerCase()) ||
+                  (s.student_number && (String(s.student_number) === String(queryTerm) || String(s.student_number) === String(parsed?.id_num))) ||
                   (parsed?.id && String(s.id) === String(parsed.id))
                 );
                 if (targetUser) {

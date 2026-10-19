@@ -1013,12 +1013,32 @@
         let matched = null;
         if (candidates && candidates.length > 0) {
           matched = candidates.find((c) => {
-            return (
-              String(c.id) === String(parsed.id) ||
-              (c.username && parsed.username && c.username.toLowerCase() === parsed.username.toLowerCase()) ||
-              (c.student_number && parsed.id_num && String(c.student_number) === String(parsed.id_num)) ||
-              (c.employee_id && parsed.id_num && String(c.employee_id) === String(parsed.id_num))
-            );
+            if (!c) return false;
+            const cId = String(c.id || "");
+            const cUser = String(c.username || "").toLowerCase();
+            const cStudentNum = String(c.student_number || c.student_no || "");
+            const cEmpNum = String(c.employee_id || c.employee_no || "");
+
+            const pId = String(parsed.id || "");
+            const pUser = String(parsed.username || "").toLowerCase();
+            const pNum = String(parsed.id_num || "");
+
+            // Match by primary ID
+            if (pId && cId === pId) return true;
+            // Match by username
+            if (pUser && cUser && cUser === pUser) return true;
+            if (pId && cUser && cUser === pId.toLowerCase()) return true;
+            // Match by Student Number
+            if (cStudentNum) {
+              if (pNum && cStudentNum === pNum) return true;
+              if (pId && cStudentNum === pId) return true;
+            }
+            // Match by Employee ID
+            if (cEmpNum) {
+              if (pNum && cEmpNum === pNum) return true;
+              if (pId && cEmpNum === pId) return true;
+            }
+            return false;
           });
         } else {
           matched = parsed;
@@ -1098,25 +1118,36 @@
           if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
 
           try {
+            let decodedText = null;
+
             if (barcodeDetector) {
-              const codes = await barcodeDetector.detect(video);
-              if (codes && codes.length > 0 && codes[0].rawValue) {
-                processScannedValue(codes[0].rawValue);
-              }
-            } else {
-              // Canvas capture fallback
+              try {
+                const codes = await barcodeDetector.detect(video);
+                if (codes && codes.length > 0 && codes[0].rawValue) {
+                  decodedText = codes[0].rawValue;
+                }
+              } catch (bErr) {}
+            }
+
+            if (!decodedText) {
+              // Canvas capture fallback with jsQR
               canvas.width = video.videoWidth;
               canvas.height = video.videoHeight;
-              const ctx = canvas.getContext("2d");
+              const ctx = canvas.getContext("2d", { willReadFrequently: true });
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              // If jsQR is available in window
               if (typeof window.jsQR === "function") {
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = window.jsQR(imgData.data, imgData.width, imgData.height);
+                const code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+                  inversionAttempts: "attemptBoth"
+                });
                 if (code && code.data) {
-                  processScannedValue(code.data);
+                  decodedText = code.data;
                 }
               }
+            }
+
+            if (decodedText) {
+              processScannedValue(decodedText);
             }
           } catch (e) {}
         }, 150);
@@ -1136,18 +1167,46 @@
         reader.onload = async (rev) => {
           const img = new Image();
           img.onload = async () => {
+            let decodedText = null;
+
             if ("BarcodeDetector" in window) {
               try {
                 const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
                 const barcodes = await detector.detect(img);
                 if (barcodes.length > 0 && barcodes[0].rawValue) {
-                  processScannedValue(barcodes[0].rawValue);
-                  return;
+                  decodedText = barcodes[0].rawValue;
                 }
               } catch (err) {}
             }
+
+            if (!decodedText) {
+              try {
+                const offscreenCanvas = document.createElement("canvas");
+                offscreenCanvas.width = img.naturalWidth || img.width;
+                offscreenCanvas.height = img.naturalHeight || img.height;
+                const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
+                offCtx.drawImage(img, 0, 0);
+                if (typeof window.jsQR === "function") {
+                  const imgData = offCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                  const code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+                    inversionAttempts: "attemptBoth"
+                  });
+                  if (code && code.data) {
+                    decodedText = code.data;
+                  }
+                }
+              } catch (canvasErr) {
+                console.warn("Canvas QR decode notice:", canvasErr);
+              }
+            }
+
+            if (decodedText) {
+              processScannedValue(decodedText);
+              return;
+            }
+
             alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420]";
-            alertBox.textContent = "Could not find a valid QR Code in this photo. Try another picture.";
+            alertBox.textContent = "Could not find a valid QR Code in this photo. Try another picture or enter your ID manually.";
             alertBox.classList.remove("hidden");
           };
           img.src = rev.target.result;
@@ -1630,6 +1689,18 @@
       };
     }
   };
+
+  // Auto-load pure JS client-side decoder (jsqr.min.js) if not loaded yet
+  if (typeof window !== "undefined" && typeof window.jsQR === "undefined") {
+    const s = document.createElement("script");
+    s.src = "jsqr.min.js";
+    s.onerror = () => {
+      const cdn = document.createElement("script");
+      cdn.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+      document.head.appendChild(cdn);
+    };
+    document.head.appendChild(s);
+  }
 
   window.QRClient = QRClient;
 })();
