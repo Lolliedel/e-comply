@@ -77,6 +77,13 @@
     G15: (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0),
     G18: (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0),
     G15_MASK: (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1),
+    getBCHTypeNumber: function (data) {
+      let d = data << 12;
+      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) >= 0) {
+        d ^= (QRUtil.G18 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18)));
+      }
+      return (data << 12) | d;
+    },
     getBCHTypeInfo: function (data) {
       let d = data << 10;
       while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) >= 0) {
@@ -282,7 +289,7 @@
     make: function () {
       if (this.typeNumber < 1) {
         let typeNumber = 1;
-        for (typeNumber = 1; typeNumber < 10; typeNumber++) {
+        for (typeNumber = 1; typeNumber <= 10; typeNumber++) {
           const rsBlocks = QRRSBlock.getRSBlocks(typeNumber, this.errorCorrectLevel);
           const buffer = new QRBitBuffer();
           let totalDataCount = 0;
@@ -385,7 +392,17 @@
       }
       this.modules[this.moduleCount - 8][8] = !test;
     },
-    setupTypeNumber: function (test) {},
+    setupTypeNumber: function (test) {
+      const bits = QRUtil.getBCHTypeNumber(this.typeNumber);
+      for (let i = 0; i < 18; i++) {
+        const mod = (!test && ((bits >> i) & 1) === 1);
+        this.modules[Math.floor(i / 3)][i % 3 + this.moduleCount - 8 - 3] = mod;
+      }
+      for (let i = 0; i < 18; i++) {
+        const mod = (!test && ((bits >> i) & 1) === 1);
+        this.modules[i % 3 + this.moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    },
     mapData: function (data, maskPattern) {
       let inc = -1;
       let row = this.moduleCount - 1;
@@ -535,7 +552,7 @@
     /**
      * Generate HTML Canvas Data URL (PNG)
      */
-    generateDataUrl(text, { size = 300, margin = 3, color = "#14432A", bgColor = "#FFFFFF" } = {}) {
+    generateDataUrl(text, { size = 320, margin = 4, color = "#000000", bgColor = "#FFFFFF" } = {}) {
       if (typeof document === "undefined") return "";
       const q = new QRCodeModel(0, 1);
       q.addData(String(text || ""));
@@ -554,8 +571,8 @@
       for (let r = 0; r < count; r++) {
         for (let c = 0; c < count; c++) {
           if (q.isDark(r, c)) {
-            const x = Math.round((c + margin) * cell);
-            const y = Math.round((r + margin) * cell);
+            const x = Math.floor((c + margin) * cell);
+            const y = Math.floor((r + margin) * cell);
             const w = Math.ceil(cell);
             const h = Math.ceil(cell);
             ctx.fillRect(x, y, w, h);
@@ -1115,7 +1132,7 @@
 
         this.scanIntervalId = setInterval(async () => {
           if (isProcessing) return;
-          if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+          if (video.readyState < 2 || !video.videoWidth) return;
 
           try {
             let decodedText = null;
@@ -1130,14 +1147,18 @@
             }
 
             if (!decodedText) {
-              // Canvas capture fallback with jsQR
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
+              // Canvas capture fallback with jsQR (clamped to max 640 for speed and precision)
+              const maxDim = 640;
+              const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+              const w = Math.round(video.videoWidth * scale);
+              const h = Math.round(video.videoHeight * scale);
+              canvas.width = w;
+              canvas.height = h;
               const ctx = canvas.getContext("2d", { willReadFrequently: true });
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              ctx.drawImage(video, 0, 0, w, h);
               if (typeof window.jsQR === "function") {
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+                const imgData = ctx.getImageData(0, 0, w, h);
+                const code = window.jsQR(imgData.data, w, h, {
                   inversionAttempts: "attemptBoth"
                 });
                 if (code && code.data) {
@@ -1179,24 +1200,36 @@
               } catch (err) {}
             }
 
-            if (!decodedText) {
-              try {
-                const offscreenCanvas = document.createElement("canvas");
-                offscreenCanvas.width = img.naturalWidth || img.width;
-                offscreenCanvas.height = img.naturalHeight || img.height;
-                const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
-                offCtx.drawImage(img, 0, 0);
-                if (typeof window.jsQR === "function") {
-                  const imgData = offCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-                  const code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+            if (!decodedText && typeof window.jsQR === "function") {
+              const naturalW = img.naturalWidth || img.width;
+              const naturalH = img.naturalHeight || img.height;
+              // Multi-scale passes (1000px, 600px, 1600px, original)
+              const maxDims = [1000, 600, 1600, Math.max(naturalW, naturalH)];
+
+              for (const maxDim of maxDims) {
+                if (decodedText) break;
+                try {
+                  const scale = Math.min(1, maxDim / Math.max(naturalW, naturalH));
+                  const targetW = Math.round(naturalW * scale);
+                  const targetH = Math.round(naturalH * scale);
+
+                  const offscreenCanvas = document.createElement("canvas");
+                  offscreenCanvas.width = targetW;
+                  offscreenCanvas.height = targetH;
+                  const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
+                  offCtx.drawImage(img, 0, 0, targetW, targetH);
+
+                  const imgData = offCtx.getImageData(0, 0, targetW, targetH);
+                  const code = window.jsQR(imgData.data, targetW, targetH, {
                     inversionAttempts: "attemptBoth"
                   });
                   if (code && code.data) {
                     decodedText = code.data;
+                    break;
                   }
+                } catch (scaleErr) {
+                  console.warn("Multi-scale decode notice:", scaleErr);
                 }
-              } catch (canvasErr) {
-                console.warn("Canvas QR decode notice:", canvasErr);
               }
             }
 
@@ -1234,7 +1267,7 @@
     renderIdCardHtml(user, { isBack = false } = {}) {
       if (!user) return "";
       const qrPayload = this.getUserQrPayload(user);
-      const qrDataUrl = this.generateDataUrl(qrPayload, { size: 300, color: "#14432A" });
+      const qrDataUrl = this.generateDataUrl(qrPayload, { size: 300, margin: 4, color: "#000000" });
       const fullName = `${user.last_name || ""}, ${user.first_name || ""} ${user.middle_initial ? user.middle_initial + "." : ""}`.trim();
       const prefix = user.title_prefix ? `${user.title_prefix} ` : "";
       const role = user.designation || (user.student_no || user.section_id || user.section ? "Student" : "Faculty");
@@ -1639,7 +1672,7 @@
 
       downloadBtn.onclick = () => {
         const qrPayload = this.getUserQrPayload(user);
-        const qrDataUrl = this.generateDataUrl(qrPayload, { size: 350, color: "#14432A" });
+        const qrDataUrl = this.generateDataUrl(qrPayload, { size: 350, margin: 4, color: "#000000" });
         const a = document.createElement("a");
         a.href = qrDataUrl;
         a.download = `ESSU_ID_${user.username || user.id}_QR.png`;
