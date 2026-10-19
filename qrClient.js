@@ -615,13 +615,22 @@
       try {
         if (str.startsWith("{") && str.endsWith("}")) {
           const parsed = JSON.parse(str);
+          const rawId = String(parsed.id || parsed.user_id || "").trim();
+          const rawUser = String(parsed.username || "").trim();
+          const rawRole = String(parsed.role || "").trim();
+          const isSuper = rawUser.toLowerCase() === "superadmin" || 
+                          rawUser.toLowerCase() === "admin" || 
+                          rawId === "admin-master" || 
+                          rawId.toLowerCase() === "superadmin" || 
+                          rawRole.toLowerCase().includes("super");
+
           return {
-            id: String(parsed.id || parsed.user_id || ""),
-            username: parsed.username || "",
-            id_num: parsed.id_num || parsed.student_number || parsed.employee_id || "",
-            name: parsed.name || "",
-            role: parsed.role || "",
-            campus: parsed.campus || ""
+            id: rawId || (isSuper ? "admin-master" : rawUser),
+            username: rawUser || (isSuper ? "superadmin" : ""),
+            id_num: parsed.id_num || parsed.student_number || parsed.employee_id || (isSuper ? "ESSU-SYS-001" : ""),
+            name: parsed.name || (isSuper ? "Super Administrator" : ""),
+            role: rawRole || (isSuper ? "Super Admin" : ""),
+            campus: parsed.campus || "Main Campus"
           };
         }
       } catch (e) {}
@@ -629,11 +638,31 @@
       // Pattern: ecomply:user:123 or ecomply:id:123 or ecomply:student:123
       const prefixMatch = str.match(/^ecomply:(?:user|student|id):([^:]+)/i);
       if (prefixMatch) {
-        return { id: prefixMatch[1] };
+        const idVal = prefixMatch[1].trim();
+        const isSuper = idVal.toLowerCase() === "superadmin" || idVal === "admin-master" || idVal === "3";
+        return {
+          id: idVal,
+          username: isSuper ? "superadmin" : idVal,
+          role: isSuper ? "Super Admin" : "",
+          name: isSuper ? "Super Administrator" : ""
+        };
+      }
+
+      // Check if raw string is superadmin / admin
+      const isRawSuper = str.toLowerCase() === "superadmin" || str.toLowerCase() === "admin" || str === "admin-master";
+      if (isRawSuper) {
+        return {
+          id: "admin-master",
+          username: "superadmin",
+          id_num: "ESSU-SYS-001",
+          name: "Super Administrator",
+          role: "Super Admin",
+          campus: "Main Campus"
+        };
       }
 
       // Plain numeric / alphanumeric ID
-      return { id: str };
+      return { id: str, username: str };
     },
 
     parseUserQr(str) {
@@ -808,15 +837,15 @@
         initials: "CN"
       },
       superadmin: {
-        id: "sample-superadmin-01",
+        id: "admin-master",
         entity_key: "superadmin",
         entity_title: "Super Admin",
-        first_name: "Alexander",
-        middle_initial: "T",
-        last_name: "Gomez",
-        title_prefix: "Engr.",
-        username: "alexander.gomez",
-        employee_id: "ESSU-SYS-2020-001",
+        first_name: "Super",
+        middle_initial: "",
+        last_name: "Administrator",
+        title_prefix: "",
+        username: "superadmin",
+        employee_id: "ESSU-SYS-001",
         designation: "Super Admin",
         role: "staff",
         department: "Management Information Systems (MIS)",
@@ -826,13 +855,13 @@
         academic_rank: "MIS Director / University Super Admin",
         blood_type: "O+",
         valid_until: "Permanent Authority",
-        emergency_contact: "Patricia Gomez · 0923-555-0321",
+        emergency_contact: "University Administration · (055) 560-9123",
         address: "Borongan City, Eastern Samar",
         role_color: "#D9A62C",
         role_bg: "#FBF3D9",
         role_badge: "System Super Administrator",
         card_theme: "gold",
-        initials: "AG"
+        initials: "SA"
       }
     },
 
@@ -946,26 +975,11 @@
           <!-- Match Status Feedback Box -->
           <div id="qrScanAlert" class="hidden mt-3 p-2.5 rounded-xl text-xs flex items-center gap-2"></div>
 
-          <!-- Actions & Alternative Input Options -->
-          <div class="mt-4 space-y-2.5">
-            <div class="flex items-center justify-between gap-2">
-              <button type="button" id="qrSwitchCameraBtn" class="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2 px-3 rounded-xl transition">
-                <img src="ICON/sync.svg" class="w-3.5 h-3.5" alt=""> Switch Camera
-              </button>
-              <label for="qrUploadInput" class="flex-1 cursor-pointer inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2 px-3 rounded-xl transition">
-                <img src="ICON/form.svg" class="w-3.5 h-3.5" alt=""> Upload Photo
-                <input type="file" id="qrUploadInput" accept="image/*" class="hidden">
-              </label>
-            </div>
-
-            <!-- Manual ID Entry Accordion -->
-            <div class="border-t border-[#EFEBDB] pt-2.5">
-              <div class="text-[11px] font-semibold text-[#8A6A0C] uppercase tracking-wider mb-1.5">Or Enter User / Student ID Number</div>
-              <div class="flex gap-2">
-                <input id="qrManualInput" placeholder="Enter ID # or username..." class="flex-1 border border-[#DEDACE] rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:border-[#D9A62C]">
-                <button type="button" id="qrManualVerifyBtn" class="bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">Verify</button>
-              </div>
-            </div>
+          <!-- Actions: Camera Switch -->
+          <div class="mt-4 flex items-center justify-center">
+            <button type="button" id="qrSwitchCameraBtn" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2.5 px-4 rounded-xl transition shadow-2xs">
+              <img src="ICON/sync.svg" class="w-3.5 h-3.5" alt=""> Switch Camera
+            </button>
           </div>
 
           <div class="pt-3 border-t border-[#EFEBDB] mt-3 text-center text-[10px] text-[#8A8D93] flex items-center justify-center gap-1.5">
@@ -986,9 +1000,6 @@
       const alertBox = document.getElementById("qrScanAlert");
       const closeBtn = document.getElementById("qrScannerCloseBtn");
       const switchBtn = document.getElementById("qrSwitchCameraBtn");
-      const uploadInput = document.getElementById("qrUploadInput");
-      const manualInput = document.getElementById("qrManualInput");
-      const manualBtn = document.getElementById("qrManualVerifyBtn");
       const topBioBtn = document.getElementById("qrTopSwitchToBioBtn");
 
       let currentFacingMode = "environment"; // default to rear camera on mobile
@@ -1021,7 +1032,8 @@
       const processScannedValue = (rawString) => {
         if (isProcessing) return;
         const parsed = this.parseUserQrPayload(rawString);
-        if (!parsed || !parsed.id) return;
+        if (!parsed || (!parsed.id && !parsed.username && !parsed.id_num)) return;
+        if (!parsed.id) parsed.id = parsed.username || parsed.id_num || "user";
 
         isProcessing = true;
         playBeepSound();
@@ -1031,26 +1043,35 @@
         if (candidates && candidates.length > 0) {
           matched = candidates.find((c) => {
             if (!c) return false;
-            const cId = String(c.id || "");
-            const cUser = String(c.username || "").toLowerCase();
-            const cStudentNum = String(c.student_number || c.student_no || "");
-            const cEmpNum = String(c.employee_id || c.employee_no || "");
+            const cId = String(c.id || "").trim();
+            const cUser = String(c.username || "").trim().toLowerCase();
+            const cStudentNum = String(c.student_number || c.student_no || "").trim();
+            const cEmpNum = String(c.employee_id || c.employee_no || "").trim();
+            const cRole = String(c.role || c.designation || "").trim().toLowerCase();
 
-            const pId = String(parsed.id || "");
-            const pUser = String(parsed.username || "").toLowerCase();
-            const pNum = String(parsed.id_num || "");
+            const pId = String(parsed.id || "").trim();
+            const pUser = String(parsed.username || "").trim().toLowerCase();
+            const pNum = String(parsed.id_num || "").trim();
+            const pRole = String(parsed.role || "").trim().toLowerCase();
+            const rawLower = String(rawString).trim().toLowerCase();
 
-            // Match by primary ID
+            // 1. Super Admin universal cross-match
+            const isCandidateSuper = cUser === "superadmin" || cUser === "admin" || cId === "admin-master" || cId === "3" || cRole.includes("super");
+            const isScannedSuper = pUser === "superadmin" || pUser === "admin" || pId === "superadmin" || pId === "admin-master" || pId === "3" || pRole.includes("super") || rawLower.includes("superadmin");
+            if (isCandidateSuper && isScannedSuper) return true;
+
+            // 2. Match by primary ID
             if (pId && cId === pId) return true;
-            // Match by username
+            // 3. Match by username
             if (pUser && cUser && cUser === pUser) return true;
             if (pId && cUser && cUser === pId.toLowerCase()) return true;
-            // Match by Student Number
+            if (pUser && cId && cId.toLowerCase() === pUser) return true;
+            // 4. Match by Student Number
             if (cStudentNum) {
               if (pNum && cStudentNum === pNum) return true;
               if (pId && cStudentNum === pId) return true;
             }
-            // Match by Employee ID
+            // 5. Match by Employee ID
             if (cEmpNum) {
               if (pNum && cEmpNum === pNum) return true;
               if (pId && cEmpNum === pId) return true;
@@ -1178,83 +1199,6 @@
       switchBtn.onclick = () => {
         currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
         startCamera(currentFacingMode);
-      };
-
-      // File upload scanner
-      uploadInput.onchange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (rev) => {
-          const img = new Image();
-          img.onload = async () => {
-            let decodedText = null;
-
-            if ("BarcodeDetector" in window) {
-              try {
-                const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-                const barcodes = await detector.detect(img);
-                if (barcodes.length > 0 && barcodes[0].rawValue) {
-                  decodedText = barcodes[0].rawValue;
-                }
-              } catch (err) {}
-            }
-
-            if (!decodedText && typeof window.jsQR === "function") {
-              const naturalW = img.naturalWidth || img.width;
-              const naturalH = img.naturalHeight || img.height;
-              // Multi-scale passes (1000px, 600px, 1600px, original)
-              const maxDims = [1000, 600, 1600, Math.max(naturalW, naturalH)];
-
-              for (const maxDim of maxDims) {
-                if (decodedText) break;
-                try {
-                  const scale = Math.min(1, maxDim / Math.max(naturalW, naturalH));
-                  const targetW = Math.round(naturalW * scale);
-                  const targetH = Math.round(naturalH * scale);
-
-                  const offscreenCanvas = document.createElement("canvas");
-                  offscreenCanvas.width = targetW;
-                  offscreenCanvas.height = targetH;
-                  const offCtx = offscreenCanvas.getContext("2d", { willReadFrequently: true });
-                  offCtx.drawImage(img, 0, 0, targetW, targetH);
-
-                  const imgData = offCtx.getImageData(0, 0, targetW, targetH);
-                  const code = window.jsQR(imgData.data, targetW, targetH, {
-                    inversionAttempts: "attemptBoth"
-                  });
-                  if (code && code.data) {
-                    decodedText = code.data;
-                    break;
-                  }
-                } catch (scaleErr) {
-                  console.warn("Multi-scale decode notice:", scaleErr);
-                }
-              }
-            }
-
-            if (decodedText) {
-              processScannedValue(decodedText);
-              return;
-            }
-
-            alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420]";
-            alertBox.textContent = "Could not find a valid QR Code in this photo. Try another picture or enter your ID manually.";
-            alertBox.classList.remove("hidden");
-          };
-          img.src = rev.target.result;
-        };
-        reader.readAsDataURL(file);
-      };
-
-      // Manual input handler
-      manualBtn.onclick = () => {
-        const val = manualInput.value.trim();
-        if (!val) return;
-        processScannedValue(val);
-      };
-      manualInput.onkeydown = (e) => {
-        if (e.key === "Enter") manualBtn.click();
       };
 
       // Auto start camera

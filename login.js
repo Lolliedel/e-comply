@@ -295,18 +295,28 @@ async function handleQrLogin() {
 
   QRClient.openScannerModal({
     title: "ESSU Digital ID Sign-In",
-    subtitle: "Present your printed or digital ESSU ID QR code to the camera, or upload an ID badge photo.",
+    subtitle: "Present your printed or digital ESSU ID QR code to the camera.",
     onSuccess: async (decodedText) => {
       if (errEl) errEl.classList.add("hidden");
       try {
         const parsed = QRClient.parseUserQr(decodedText);
         const queryTerm = (parsed?.id || parsed?.id_num || parsed?.student_number || parsed?.employee_id || decodedText).trim();
 
-        if (!queryTerm) {
+        if (!queryTerm && !parsed?.username) {
           throw new Error("Scanned QR code does not contain a valid ESSU credential.");
         }
 
         let targetUser = null;
+
+        const isSuperAdminQr = 
+          queryTerm.toLowerCase() === "superadmin" || 
+          queryTerm.toLowerCase() === "admin" || 
+          queryTerm === "admin-master" ||
+          queryTerm === "3" && (parsed?.role === "Super Admin" || String(parsed?.name || "").toLowerCase().includes("super")) ||
+          (parsed?.username && (parsed.username.toLowerCase() === "superadmin" || parsed.username.toLowerCase() === "admin")) ||
+          (parsed?.role && String(parsed.role).toLowerCase().includes("super")) ||
+          (parsed?.name && String(parsed.name).toLowerCase().includes("super")) ||
+          (decodedText && decodedText.toLowerCase().includes("superadmin"));
 
         // 1. Try finding in app_users
         if (!parsed || parsed.role !== "student") {
@@ -315,6 +325,7 @@ async function handleQrLogin() {
               const { data: staffList } = await sb.from("app_users").select("id, first_name, last_name, designation, college_id, department_id, username");
               if (staffList) {
                 targetUser = staffList.find(u => 
+                  (isSuperAdminQr && (u.username?.toLowerCase() === "superadmin" || u.designation === "Super Admin")) ||
                   String(u.id) === String(queryTerm) || 
                   (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
                   (parsed?.username && u.username && u.username.toLowerCase() === parsed.username.toLowerCase()) ||
@@ -329,7 +340,7 @@ async function handleQrLogin() {
         }
 
         // 2. Try finding in students
-        if (!targetUser && (!parsed || parsed.role !== "staff")) {
+        if (!targetUser && (!parsed || parsed.role !== "staff") && !isSuperAdminQr) {
           try {
             if (typeof sb !== "undefined" && sb && sb.from) {
               const { data: studentList } = await sb.from("students").select("id, first_name, last_name, section_id, college_id, department_id, username, student_number");
@@ -357,7 +368,8 @@ async function handleQrLogin() {
           const vault = ZKTeco.getBiometricVault();
           for (const u of Object.values(vault)) {
             if (!u) continue;
-            if (String(u.id) === String(queryTerm) || 
+            if ((isSuperAdminQr && (u.username?.toLowerCase() === "superadmin" || u.designation === "Super Admin")) ||
+                String(u.id) === String(queryTerm) || 
                 (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
                 (u.student_number && String(u.student_number) === String(queryTerm)) ||
                 (parsed?.id && String(u.id) === String(parsed.id))) {
@@ -370,9 +382,11 @@ async function handleQrLogin() {
         // 4. Fallback: Check Official Sample School ID Entities (All Entities)
         if (!targetUser && typeof QRClient !== "undefined" && QRClient.SAMPLE_ENTITIES) {
           const sampleMatch = Object.values(QRClient.SAMPLE_ENTITIES).find(ent =>
+            (isSuperAdminQr && (ent.username === "superadmin" || ent.designation === "Super Admin")) ||
             String(ent.id) === String(queryTerm) ||
             (parsed?.id && String(ent.id) === String(parsed.id)) ||
             (ent.username && ent.username.toLowerCase() === queryTerm.toLowerCase()) ||
+            (ent.username && parsed?.username && ent.username.toLowerCase() === parsed.username.toLowerCase()) ||
             (ent.student_number && String(ent.student_number) === String(queryTerm)) ||
             (ent.employee_id && String(ent.employee_id) === String(queryTerm))
           );
@@ -386,21 +400,21 @@ async function handleQrLogin() {
         }
 
         // 5. Fallback: Emergency Super Admin check
-        if (!targetUser && (queryTerm.toLowerCase() === "superadmin" || queryTerm.toLowerCase() === "admin" || queryTerm === "admin-master")) {
+        if (!targetUser && isSuperAdminQr) {
           targetUser = {
-            id: "admin-master",
+            id: (parsed?.id && parsed.id !== "superadmin") ? parsed.id : "admin-master",
             role: "staff",
             designation: "Super Admin",
-            first_name: "Super",
-            last_name: "Admin",
+            first_name: parsed?.name ? parsed.name.split(" ")[0] : "Super",
+            last_name: parsed?.name ? parsed.name.split(" ").slice(1).join(" ") || "Administrator" : "Administrator",
             username: "superadmin",
-            campus_name: "Main Campus"
+            campus_name: parsed?.campus || "Main Campus"
           };
         }
 
         if (!targetUser) {
           if (errEl) {
-            errEl.textContent = `No ESSU account found matching credential: "${queryTerm}".`;
+            errEl.textContent = `No ESSU account found matching credential: "${queryTerm || decodedText}".`;
             errEl.classList.remove("hidden");
           }
           return;
