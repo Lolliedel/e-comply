@@ -634,19 +634,33 @@ function renderProfile(s) {
     if (testBtn) {
       testBtn.classList.remove("hidden");
       testBtn.onclick = () => {
+        const openQrAlternative = () => {
+          if (typeof QRClient !== "undefined") {
+            QRClient.openScannerModal({
+              title: "Verify Identity: QR Code",
+              subtitle: "Scan your ESSU Digital ID QR code to verify your identity.",
+              candidates: [s],
+              onMatch: () => { showToast("\u2713 Identity verified via QR Code!"); }
+            });
+          } else {
+            showToast("Neither fingerprint nor QR scanner is available.", true);
+          }
+        };
+
         if (typeof ZKTeco === "undefined") {
-          showToast("ZKTeco library not available", true);
+          openQrAlternative();
           return;
         }
         ZKTeco.openVerifyModal({
           title: "Test Live20R Biometric",
-          subtitle: "Place your finger on the Live20R scanner to verify against your profile.",
+          subtitle: "Place your finger on the Live20R scanner or switch to QR Code ID.",
           candidates: [s],
           onMatch: () => {
             showToast("Fingerprint verified successfully!");
           },
           onError: (err) => {
-            showToast(err.message || "Fingerprint does not match.", true);
+            showToast(err.message || "Fingerprint does not match. Try QR code instead.", true);
+            openQrAlternative();
           }
         });
       };
@@ -687,4 +701,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("appShell").classList.remove("hidden");
   await loadOwnRecord();
-});
+});

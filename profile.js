@@ -219,24 +219,41 @@ function handleEnrollFingerprint() {
 }
 
 function handleTestFingerprint() {
+  const candidate = { ...record, ...profile, fingerprint_credential_id: pendingFingerprintTemplate };
+
+  const openQrAlternative = () => {
+    if (typeof QRClient !== "undefined") {
+      QRClient.openScannerModal({
+        title: "Verify Identity: QR Code",
+        subtitle: "Scan your ESSU Digital ID QR code to verify your identity.",
+        candidates: [{ ...record, ...profile }],
+        onMatch: () => { showToast("\u2713 Identity verified via QR Code!"); }
+      });
+    } else {
+      showToast("Neither ZKTeco nor QR scanner is available.", true);
+    }
+  };
+
   if (typeof ZKTeco === "undefined") {
-    showToast("ZKTeco library not available", true);
+    openQrAlternative();
     return;
   }
   if (!pendingFingerprintTemplate) {
-    showToast("No fingerprint template to test.", true);
+    showToast("No fingerprint template on file. Using QR code instead.", true);
+    openQrAlternative();
     return;
   }
 
   ZKTeco.openVerifyModal({
     title: "Test Live20R Scan",
     subtitle: "Scan your fingerprint to test match against your profile.",
-    candidates: [{ ...record, fingerprint_credential_id: pendingFingerprintTemplate }],
+    candidates: [candidate],
     onMatch: () => {
       showToast("Live20R biometric match verified 100%!");
     },
     onError: (err) => {
-      showToast(err.message || "Fingerprint does not match.", true);
+      showToast(err.message || "Fingerprint does not match. Try QR code instead.", true);
+      openQrAlternative();
     }
   });
 }
