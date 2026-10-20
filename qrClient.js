@@ -1134,7 +1134,15 @@
           console.warn("Camera access error:", err);
           notice.classList.remove("hidden");
           noticeTitle.textContent = "Camera Unavailable";
-          noticeSub.textContent = "Please allow camera access or use 'Upload Photo' / manual ID input.";
+          if (err && err.name === "NotAllowedError") {
+            noticeTitle.textContent = "Camera Permission Denied";
+            noticeSub.textContent = "Please allow camera access: click the camera icon in your browser address bar, then reload and scan again.";
+          } else if (err && err.name === "NotFoundError") {
+            noticeTitle.textContent = "No Camera Found";
+            noticeSub.textContent = "No camera detected on this device. Try a different device with a camera.";
+          } else {
+            noticeSub.textContent = "Camera unavailable. Please allow camera permissions in your browser settings.";
+          }
         }
       };
 
