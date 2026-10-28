@@ -17,48 +17,74 @@
 </head>
 <body class="bg-[#FAF7EF] text-[#1B2116] p-3 sm:p-6">
 
-<!-- ══════════════════════ LOGIN SCREEN ══════════════════════ -->
-<main id="loginScreen" class="max-w-sm mx-auto mt-16" role="main" aria-label="Sign In Workspace">
-  <div class="text-center mb-6">
+<!-- LOGIN SCREEN -->
+<main id="loginScreen" class="max-w-sm mx-auto mt-10 sm:mt-14" role="main" aria-label="Sign In Workspace">
+
+  <!-- University Header -->
+  <div class="text-center mb-5">
     <div class="w-20 h-20 mx-auto mb-3 rounded-full bg-white p-1.5 shadow-md border-2 border-[#D9A62C] flex items-center justify-center">
       <img src="ICON/ESSU.png" alt="Eastern Samar State University" class="w-full h-full object-contain">
     </div>
     <h1 class="font-display text-2xl font-bold text-[#14432A]">ESSU E-Comply</h1>
     <p class="text-xs font-semibold text-[#8A6A0C] tracking-wide uppercase mt-1">Eastern Samar State University Portal</p>
   </div>
-  <form id="loginForm" class="bg-white border border-[#E3DFC8] rounded-xl p-4 sm:p-6 shadow-sm" aria-label="Portal Sign In Form">
+
+  <!-- ── PRIMARY: QR Code Sign-In (always works, no ZKTeco needed) ── -->
+  <div class="bg-[#14432A] rounded-2xl p-4 mb-4 shadow-md">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+        <img src="ICON/qr.svg" class="w-5 h-5 invert" alt="">
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white leading-tight">Sign in with QR Code ID</div>
+        <div class="text-[11px] text-white/65">Works on mobile &amp; webcam — no ZKTeco bridge needed</div>
+      </div>
+    </div>
+    <button type="button" id="qrLoginBtn"
+      class="w-full bg-[#D9A62C] hover:bg-[#C99520] active:bg-[#B8821A] text-[#14432A] font-bold text-sm py-3 rounded-xl transition flex items-center justify-center gap-2 shadow">
+      <img src="ICON/qr.svg" class="w-4 h-4" alt="">
+      Open QR Code Scanner
+    </button>
+    <p class="text-[11px] text-white/55 text-center mt-2">Point camera at your printed or digital ESSU ID card</p>
+  </div>
+
+  <!-- Divider -->
+  <div class="relative my-4">
+    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#E3DFC8]"></div></div>
+    <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#FAF7EF] px-2 text-[#8A8D93]">Or sign in another way</span></div>
+  </div>
+
+  <!-- Username / Password form -->
+  <form id="loginForm" class="bg-white border border-[#E3DFC8] rounded-xl p-4 sm:p-5 shadow-sm" aria-label="Portal Sign In Form">
     <div class="mb-4">
       <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Username</label>
-      <input id="loginUsername" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" autocomplete="username">
+      <input id="loginUsername" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" autocomplete="username" inputmode="text">
     </div>
-    <div class="mb-5">
+    <div class="mb-4">
       <label class="block text-xs font-semibold text-[#52555C] mb-1.5">Password</label>
       <input id="loginPassword" type="password" class="font-mono w-full border border-[#DEDACE] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#D9A62C]" autocomplete="current-password">
     </div>
     <p id="loginError" class="text-xs text-[#B3432B] mb-3 hidden"></p>
     <button type="submit" id="loginBtn" class="w-full bg-[#14432A] hover:bg-[#1B5636] text-white font-semibold text-sm py-2.5 rounded-lg transition">Sign in</button>
-    
-    <div class="relative my-4">
-      <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#E3DFC8]"></div></div>
+
+    <!-- ZKTeco Fingerprint (secondary, offline-optional) -->
+    <div class="relative my-3">
+      <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#F0EDDE]"></div></div>
       <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-[#8A8D93]">Or</span></div>
     </div>
-
     <button type="button" id="biometricLoginBtn" class="w-full border border-[#DEDACE] hover:bg-[#FAF7EF] text-[#14432A] font-semibold text-sm py-2.5 rounded-lg transition flex items-center justify-center gap-2">
       <img src="ICON/biometric.svg" class="w-4 h-4 object-contain" alt="">
-      <span>Sign in with Fingerprint</span>
-    </button>
-    <button type="button" id="qrLoginBtn" class="w-full mt-2 border border-[#DEDACE] hover:bg-[#FAF7EF] text-[#14432A] font-semibold text-sm py-2.5 rounded-lg transition flex items-center justify-center gap-2">
-      <img src="ICON/qr.svg" class="w-4 h-4 object-contain" alt="">
-      <span>Sign in with QR Code ID</span>
+      <span>Sign in with Fingerprint (ZKTeco)</span>
     </button>
     <div id="scannerStatusBadge" class="mt-2 text-center text-[11px] text-[#6B7060] flex items-center justify-center gap-1.5">
       <span id="scannerIndicator" class="w-1.5 h-1.5 rounded-full bg-[#8A8D93]"></span>
-      <span id="scannerStatusText">ZKTeco Live20R: checking…</span>
+      <span id="scannerStatusText">ZKTeco Live20R: checking&hellip;</span>
     </div>
   </form>
+
 </main>
 
-<!-- ══════════════════ FORCE PASSWORD CHANGE ══════════════════ -->
+<!-- FORCE PASSWORD CHANGE -->
 <div id="forcePasswordScreen" class="hidden max-w-sm mx-auto mt-20">
   <div class="text-center mb-6">
     <div class="font-display text-xl font-bold">Set a new password</div>
@@ -78,7 +104,7 @@
   </form>
 </div>
 
-<!-- ══════════════ NO PORTAL FOR THIS ROLE (yet) ══════════════ -->
+<!-- NO PORTAL FOR THIS ROLE -->
 <div id="noPortalScreen" class="hidden max-w-sm mx-auto mt-20 text-center">
   <div class="font-display text-xl font-bold mb-2">You're signed in</div>
   <p id="noPortalMessage" class="text-sm text-[#6B7060] mb-5"></p>

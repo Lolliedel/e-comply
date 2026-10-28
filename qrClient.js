@@ -552,9 +552,9 @@
     /**
      * Generate HTML Canvas Data URL (PNG)
      */
-    generateDataUrl(text, { size = 320, margin = 4, color = "#000000", bgColor = "#FFFFFF" } = {}) {
+    generateDataUrl(text, { size = 320, margin = 6, color = "#000000", bgColor = "#FFFFFF" } = {}) {
       if (typeof document === "undefined") return "";
-      const q = new QRCodeModel(0, 1);
+      const q = new QRCodeModel(0, 0); // error level M (0) for better scan tolerance vs L (1)
       q.addData(String(text || ""));
       q.make();
       const count = q.getModuleCount();
@@ -877,6 +877,11 @@
         clearInterval(this.scanIntervalId);
         this.scanIntervalId = null;
       }
+      // Cancel any running requestAnimationFrame scan loop
+      if (this._rafId) {
+        cancelAnimationFrame(this._rafId);
+        this._rafId = null;
+      }
       if (this.activeStream) {
         this.activeStream.getTracks().forEach((track) => track.stop());
         this.activeStream = null;
@@ -939,47 +944,60 @@
           ` : ""}
 
           <!-- Live Camera Viewfinder -->
-          <div class="relative w-full aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-inner border-2 border-[#14432A]">
-            <video id="qrScannerVideo" playsinline autoplay muted class="w-full h-full object-cover"></video>
+          <div class="relative w-full aspect-square max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-inner border-2 border-[#14432A]">
+            <video id="qrScannerVideo" playsinline autoplay muted class="w-full h-full object-cover" style="object-fit:cover;"></video>
             <canvas id="qrScannerCanvas" class="hidden"></canvas>
 
             <!-- Animated Targeting HUD -->
-            <div class="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
-              <div class="relative w-full h-full border-2 border-[#D9A62C]/70 rounded-xl shadow-[0_0_15px_rgba(217,166,44,0.4)] flex items-center justify-center">
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center p-5">
+              <div id="qrViewfinderBox" class="relative w-full h-full rounded-xl flex items-center justify-center" style="border:2.5px solid rgba(217,166,44,0.85);box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 18px rgba(217,166,44,0.5);">
                 <!-- Laser Sweep -->
-                <div class="absolute left-2 right-2 h-0.5 bg-[#D9A62C] shadow-[0_0_8px_#D9A62C] animate-pulse" style="animation: qrSweep 2s ease-in-out infinite;"></div>
-                <!-- Corner brackets -->
-                <div class="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-[#14432A] -mt-1 -ml-1"></div>
-                <div class="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-[#14432A] -mt-1 -mr-1"></div>
-                <div class="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-[#14432A] -mb-1 -ml-1"></div>
-                <div class="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-[#14432A] -mb-1 -mr-1"></div>
+                <div id="qrLaserLine" class="absolute left-2 right-2 h-0.5 bg-[#D9A62C] shadow-[0_0_8px_#D9A62C]" style="animation: qrSweep 1.8s ease-in-out infinite;top:10%;"></div>
+                <!-- Corner brackets — thicker for visibility -->
+                <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-[#D9A62C] rounded-tl-sm -mt-0.5 -ml-0.5"></div>
+                <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-[#D9A62C] rounded-tr-sm -mt-0.5 -mr-0.5"></div>
+                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-[#D9A62C] rounded-bl-sm -mb-0.5 -ml-0.5"></div>
+                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-[#D9A62C] rounded-br-sm -mb-0.5 -mr-0.5"></div>
+                <!-- Scan hint text -->
+                <span class="text-[10px] text-white/60 font-semibold absolute bottom-2 left-0 right-0 text-center tracking-wide">Hold QR code steady</span>
               </div>
             </div>
 
+            <!-- Torch / Flash button (mobile) -->
+            <button type="button" id="qrTorchBtn" class="hidden absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white text-base z-10" title="Toggle flashlight">🔦</button>
+
             <!-- Camera Loading / Fallback Notice -->
-            <div id="qrCameraNotice" class="absolute inset-0 bg-[#1B2116]/90 text-white flex flex-col items-center justify-center p-4 text-center">
+            <div id="qrCameraNotice" class="absolute inset-0 bg-[#1B2116]/92 text-white flex flex-col items-center justify-center p-4 text-center z-20">
               <img src="ICON/qr.svg" class="w-10 h-10 mb-2 invert opacity-60" alt="">
               <div class="text-xs font-semibold mb-1" id="qrCameraNoticeTitle">Initializing Camera…</div>
               <p class="text-[11px] text-white/70" id="qrCameraNoticeSub">Allow browser camera permissions to scan ID card directly.</p>
+              <button type="button" id="qrRetryBtn" class="hidden mt-3 bg-[#D9A62C] text-[#14432A] text-xs font-bold px-4 py-1.5 rounded-lg">Retry Camera</button>
             </div>
           </div>
 
           <style>
             @keyframes qrSweep {
-              0% { top: 10%; opacity: 0.3; }
-              50% { top: 85%; opacity: 1; }
-              100% { top: 10%; opacity: 0.3; }
+              0%   { top: 8%;  opacity: 0.25; }
+              50%  { top: 88%; opacity: 1;    }
+              100% { top: 8%;  opacity: 0.25; }
             }
           </style>
 
-          <!-- Match Status Feedback Box -->
-          <div id="qrScanAlert" class="hidden mt-3 p-2.5 rounded-xl text-xs flex items-center gap-2"></div>
+          <!-- Scan feedback bar -->
+          <div id="qrScanFeedback" class="mt-2 text-center text-[11px] text-[#8A6A0C] font-semibold h-4"></div>
 
-          <!-- Actions: Camera Switch -->
-          <div class="mt-4 flex items-center justify-center">
-            <button type="button" id="qrSwitchCameraBtn" class="w-full inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2.5 px-4 rounded-xl transition shadow-2xs">
+          <!-- Match Status Feedback Box -->
+          <div id="qrScanAlert" class="hidden mt-2 p-2.5 rounded-xl text-xs flex items-center gap-2"></div>
+
+          <!-- Actions row -->
+          <div class="mt-3 flex items-center justify-center gap-2">
+            <button type="button" id="qrSwitchCameraBtn" class="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2.5 px-3 rounded-xl transition shadow-2xs">
               <img src="ICON/sync.svg" class="w-3.5 h-3.5" alt=""> Switch Camera
             </button>
+            <button type="button" id="qrUploadImageBtn" class="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#FAF7EF] hover:bg-[#F2EEDD] border border-[#DEDACE] text-[#14432A] text-xs font-semibold py-2.5 px-3 rounded-xl transition shadow-2xs">
+              <img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> Upload QR Image
+            </button>
+            <input type="file" id="qrUploadFileInput" accept="image/*" capture="environment" class="hidden">
           </div>
 
           <div class="pt-3 border-t border-[#EFEBDB] mt-3 text-center text-[10px] text-[#8A8D93] flex items-center justify-center gap-1.5">
@@ -998,33 +1016,52 @@
       const noticeTitle = document.getElementById("qrCameraNoticeTitle");
       const noticeSub = document.getElementById("qrCameraNoticeSub");
       const alertBox = document.getElementById("qrScanAlert");
+      const feedbackEl = document.getElementById("qrScanFeedback");
       const closeBtn = document.getElementById("qrScannerCloseBtn");
       const switchBtn = document.getElementById("qrSwitchCameraBtn");
+      const torchBtn = document.getElementById("qrTorchBtn");
+      const retryBtn = document.getElementById("qrRetryBtn");
       const topBioBtn = document.getElementById("qrTopSwitchToBioBtn");
 
-      let currentFacingMode = "environment"; // default to rear camera on mobile
-      let isProcessing = false;
+      // iOS Safari: set all needed attributes
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("muted", "");
+      video.muted = true;
 
-      // Close handlers
-      closeBtn.onclick = () => {
+      // Mobile detection — use rear camera by default on mobile, front on desktop
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      let currentFacingMode = isMobile ? "environment" : "user";
+      let isProcessing = false;
+      let torchOn = false;
+      let torchTrack = null;
+      let rafId = null; // requestAnimationFrame id
+
+      // ── Close handlers ─────────────────────────────────────────────────────
+      const doClose = () => {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
         this.closeModal();
         if (typeof onClose === "function") onClose();
       };
-      overlay.onclick = (e) => {
-        if (e.target === overlay) {
-          this.closeModal();
-          if (typeof onClose === "function") onClose();
-        }
-      };
+      closeBtn.onclick = doClose;
+      overlay.onclick = (e) => { if (e.target === overlay) doClose(); };
 
       if (topBioBtn) {
         topBioBtn.onclick = () => {
-          this.closeModal();
+          doClose();
           if (typeof window.ZKTeco !== "undefined" && typeof window.ZKTeco.openVerifyModal === "function") {
             window.ZKTeco.openVerifyModal({ title, subtitle, candidates, onMatch, onError, onClose });
           } else {
             alert("ZKTeco Live20R biometric SDK is not loaded.");
           }
+        };
+      }
+
+      // ── Retry button ────────────────────────────────────────────────────────
+      if (retryBtn) {
+        retryBtn.onclick = () => {
+          retryBtn.classList.add("hidden");
+          startCamera(currentFacingMode);
         };
       }
 
@@ -1104,112 +1141,254 @@
         }, 600);
       };
 
-      // Camera initialization
+      // ── Image preprocessing: boost contrast for better QR decode on mobile ──
+      const preprocessImageData = (ctx, w, h) => {
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        // Apply contrast + brightness boost to make QR finder patterns pop
+        const contrast = 1.6;  // 1.0 = no change
+        const brightness = 10; // add flat brightness offset
+        const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
+        for (let i = 0; i < d.length; i += 4) {
+          // Greyscale weighted average
+          const grey = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          // Apply contrast + brightness
+          const out = Math.min(255, Math.max(0, factor * (grey - 128) + 128 + brightness));
+          d[i] = d[i + 1] = d[i + 2] = out;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return ctx.getImageData(0, 0, w, h);
+      };
+
+      // ── Camera initialization ────────────────────────────────────────────────
       const startCamera = async (facing) => {
+        // Stop previous RAF loop and stream
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        if (this.scanIntervalId) { clearInterval(this.scanIntervalId); this.scanIntervalId = null; }
         if (this.activeStream) {
           this.activeStream.getTracks().forEach((t) => t.stop());
           this.activeStream = null;
         }
+        torchTrack = null;
         notice.classList.remove("hidden");
+        if (retryBtn) retryBtn.classList.add("hidden");
         noticeTitle.textContent = "Starting Camera…";
-        noticeSub.textContent = "Requesting video stream from device…";
+        noticeSub.textContent = "Requesting camera stream…";
+        if (feedbackEl) feedbackEl.textContent = "";
 
-        try {
-          const constraints = {
-            video: {
-              facingMode: facing,
-              width: { ideal: 640 },
-              height: { ideal: 640 }
-            }
-          };
-          const stream = await navigator.mediaDevices.getUserMedia(constraints);
-          this.activeStream = stream;
-          video.srcObject = stream;
-          await video.play();
-          notice.classList.add("hidden");
+        // Constraint sets tried in order — most capable first
+        const constraintSets = [
+          { video: { facingMode: { ideal: facing }, width: { ideal: 1920, min: 320 }, height: { ideal: 1080, min: 240 }, focusMode: "continuous" } },
+          { video: { facingMode: { ideal: facing }, width: { ideal: 1280, min: 320 }, height: { ideal: 720,  min: 240 } } },
+          { video: { facingMode: { ideal: facing }, width: { ideal: 640  }, height: { ideal: 480  } } },
+          { video: { facingMode: facing } },
+          { video: { width: { ideal: 640 }, height: { ideal: 480 } } },
+          { video: true }
+        ];
 
-          // Start detection loop
-          startDetectionLoop();
-        } catch (err) {
-          console.warn("Camera access error:", err);
+        let stream = null;
+        for (const cs of constraintSets) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(cs);
+            if (stream) break;
+          } catch (_) { /* try next */ }
+        }
+
+        if (!stream) {
           notice.classList.remove("hidden");
-          noticeTitle.textContent = "Camera Unavailable";
-          if (err && err.name === "NotAllowedError") {
-            noticeTitle.textContent = "Camera Permission Denied";
-            noticeSub.textContent = "Please allow camera access: click the camera icon in your browser address bar, then reload and scan again.";
-          } else if (err && err.name === "NotFoundError") {
-            noticeTitle.textContent = "No Camera Found";
-            noticeSub.textContent = "No camera detected on this device. Try a different device with a camera.";
-          } else {
-            noticeSub.textContent = "Camera unavailable. Please allow camera permissions in your browser settings.";
+          noticeTitle.textContent = "Camera Permission Denied";
+          noticeSub.textContent = "Please allow camera access in your browser settings, then tap Retry.";
+          if (retryBtn) retryBtn.classList.remove("hidden");
+          return;
+        }
+
+        this.activeStream = stream;
+
+        // Attempt to enable torch on the rear-facing track (mobile only)
+        const tracks = stream.getVideoTracks();
+        if (tracks.length > 0) {
+          torchTrack = tracks[0];
+          const caps = torchTrack.getCapabilities ? torchTrack.getCapabilities() : {};
+          if (caps.torch) {
+            if (torchBtn) torchBtn.classList.remove("hidden");
           }
         }
+
+        video.srcObject = stream;
+        // Wait for metadata (gives us videoWidth/videoHeight)
+        await new Promise((resolve) => {
+          video.onloadedmetadata = resolve;
+          setTimeout(resolve, 4000); // safety fallback
+        });
+        try { await video.play(); } catch (_) {}
+        notice.classList.add("hidden");
+
+        // Start the high-performance RAF-based detection loop
+        startDetectionLoop();
       };
 
-      // BarcodeDetector / Canvas Reader loop
+      // ── Detection loop using requestAnimationFrame ────────────────────────────
       const startDetectionLoop = () => {
-        if (this.scanIntervalId) clearInterval(this.scanIntervalId);
+        if (rafId) cancelAnimationFrame(rafId);
 
+        // Try native BarcodeDetector first (hardware-accelerated on Android Chrome)
         let barcodeDetector = null;
         if ("BarcodeDetector" in window) {
-          try {
-            barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
-          } catch (e) {
-            barcodeDetector = null;
-          }
+          try { barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] }); } catch (_) {}
         }
 
-        this.scanIntervalId = setInterval(async () => {
+        let frameCount = 0;
+        let lastDecodeMs = 0;
+        // Throttle: attempt decode at most every 120ms to keep UI responsive
+        const DECODE_THROTTLE_MS = 120;
+
+        const tick = async (timestamp) => {
+          rafId = requestAnimationFrame(tick);
+
           if (isProcessing) return;
-          if (video.readyState < 2 || !video.videoWidth) return;
+          if (!video.videoWidth || !video.videoHeight || video.readyState < 2) return;
+
+          const now = timestamp || performance.now();
+          if (now - lastDecodeMs < DECODE_THROTTLE_MS) return;
+          lastDecodeMs = now;
+          frameCount++;
 
           try {
             let decodedText = null;
 
-            if (barcodeDetector) {
+            // ── Path 1: Native BarcodeDetector (fastest on Android Chrome) ──
+            if (barcodeDetector && !decodedText) {
               try {
                 const codes = await barcodeDetector.detect(video);
                 if (codes && codes.length > 0 && codes[0].rawValue) {
                   decodedText = codes[0].rawValue;
                 }
-              } catch (bErr) {}
+              } catch (_) {
+                barcodeDetector = null; // disable if it starts throwing
+              }
             }
 
-            if (!decodedText) {
-              // Canvas capture fallback with jsQR (clamped to max 640 for speed and precision)
-              const maxDim = 640;
-              const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-              const w = Math.round(video.videoWidth * scale);
-              const h = Math.round(video.videoHeight * scale);
-              canvas.width = w;
-              canvas.height = h;
+            // ── Path 2: jsQR with enhanced preprocessing ──────────────────
+            if (!decodedText && typeof window.jsQR === "function") {
+              // Use the centre crop (viewfinder region) — more accurate + faster
+              const vw = video.videoWidth;
+              const vh = video.videoHeight;
+              // Crop the middle 80% square
+              const cropSize = Math.min(vw, vh) * 0.85;
+              const sx = (vw - cropSize) / 2;
+              const sy = (vh - cropSize) / 2;
+              // Scale to 512 for jsQR — sweet spot for speed vs accuracy
+              const DECODE_SIZE = 512;
+              canvas.width = DECODE_SIZE;
+              canvas.height = DECODE_SIZE;
               const ctx = canvas.getContext("2d", { willReadFrequently: true });
-              ctx.drawImage(video, 0, 0, w, h);
-              if (typeof window.jsQR === "function") {
-                const imgData = ctx.getImageData(0, 0, w, h);
-                const code = window.jsQR(imgData.data, w, h, {
-                  inversionAttempts: "attemptBoth"
-                });
-                if (code && code.data) {
-                  decodedText = code.data;
-                }
+              ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, DECODE_SIZE, DECODE_SIZE);
+
+              // Attempt 1: Raw pixels
+              let imgData = ctx.getImageData(0, 0, DECODE_SIZE, DECODE_SIZE);
+              let result = window.jsQR(imgData.data, DECODE_SIZE, DECODE_SIZE, { inversionAttempts: "attemptBoth" });
+              if (result && result.data) {
+                decodedText = result.data;
+              }
+
+              // Attempt 2: Preprocessed (contrast boost + greyscale) — helps in dim/backlit conditions
+              if (!decodedText) {
+                ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, DECODE_SIZE, DECODE_SIZE);
+                imgData = preprocessImageData(ctx, DECODE_SIZE, DECODE_SIZE);
+                result = window.jsQR(imgData.data, DECODE_SIZE, DECODE_SIZE, { inversionAttempts: "attemptBoth" });
+                if (result && result.data) decodedText = result.data;
+              }
+
+              // Attempt 3: Full frame at lower resolution (catches QR held far away)
+              if (!decodedText) {
+                const WIDE_SIZE = 320;
+                canvas.width = WIDE_SIZE;
+                canvas.height = Math.round(WIDE_SIZE * vh / vw);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                result = window.jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" });
+                if (result && result.data) decodedText = result.data;
               }
             }
 
             if (decodedText) {
               processScannedValue(decodedText);
+            } else if (feedbackEl && frameCount % 15 === 0) {
+              // Pulse "Scanning…" dots so user knows it's alive
+              const dots = ".".repeat(((frameCount / 15) % 3) + 1);
+              feedbackEl.textContent = "Scanning" + dots;
             }
-          } catch (e) {}
-        }, 150);
+          } catch (_) {}
+        };
+
+        rafId = requestAnimationFrame(tick);
       };
 
-      // Switch Camera button
+      // ── Switch Camera ───────────────────────────────────────────────────────
       switchBtn.onclick = () => {
         currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
         startCamera(currentFacingMode);
       };
 
-      // Auto start camera
+      // ── Torch / Flashlight toggle (mobile rear camera only) ──────────────────
+      if (torchBtn) {
+        torchBtn.onclick = async () => {
+          if (!torchTrack) return;
+          try {
+            torchOn = !torchOn;
+            await torchTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+            torchBtn.textContent = torchOn ? "💡" : "🔦";
+            torchBtn.style.background = torchOn ? "rgba(217,166,44,0.85)" : "rgba(0,0,0,0.5)";
+          } catch (_) {}
+        };
+      }
+
+      // ── Upload QR Image from file / gallery ──────────────────────────────────
+      const uploadBtn = document.getElementById("qrUploadImageBtn");
+      const uploadFileInput = document.getElementById("qrUploadFileInput");
+      if (uploadBtn && uploadFileInput) {
+        uploadBtn.onclick = () => uploadFileInput.click();
+        uploadFileInput.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+              // Try at full resolution first, then downscaled
+              const tryDecode = (w, h) => {
+                const off = document.createElement("canvas");
+                off.width = w; off.height = h;
+                const ctx2 = off.getContext("2d", { willReadFrequently: true });
+                ctx2.drawImage(img, 0, 0, w, h);
+                const id2 = ctx2.getImageData(0, 0, w, h);
+                if (typeof window.jsQR === "function") {
+                  const r = window.jsQR(id2.data, w, h, { inversionAttempts: "attemptBoth" });
+                  return r && r.data ? r.data : null;
+                }
+                return null;
+              };
+
+              let decoded = tryDecode(img.naturalWidth, img.naturalHeight);
+              if (!decoded) decoded = tryDecode(1024, Math.round(1024 * img.naturalHeight / img.naturalWidth));
+              if (!decoded) decoded = tryDecode(512, Math.round(512 * img.naturalHeight / img.naturalWidth));
+
+              if (decoded) {
+                processScannedValue(decoded);
+              } else {
+                alertBox.className = "mt-2 p-2.5 rounded-xl text-xs bg-[#FBF3D9] border border-[#EFDBA0] text-[#8A6A0C] flex items-center gap-2";
+                alertBox.innerHTML = `<img src="ICON/qr.svg" class="w-3.5 h-3.5" alt=""> <span>No QR code found in that image. Make sure the QR is clearly visible and try again.</span>`;
+                alertBox.classList.remove("hidden");
+              }
+            };
+            img.src = evt.target.result;
+          };
+          reader.readAsDataURL(file);
+          uploadFileInput.value = "";
+        };
+      }
+
+      // ── Auto-start camera ────────────────────────────────────────────────────
       startCamera(currentFacingMode);
     },
 
@@ -1219,7 +1398,7 @@
     renderIdCardHtml(user, { isBack = false } = {}) {
       if (!user) return "";
       const qrPayload = this.getUserQrPayload(user);
-      const qrDataUrl = this.generateDataUrl(qrPayload, { size: 300, margin: 4, color: "#000000" });
+      const qrDataUrl = this.generateDataUrl(qrPayload, { size: 400, margin: 6, color: "#000000" });
       const fullName = `${user.last_name || ""}, ${user.first_name || ""} ${user.middle_initial ? user.middle_initial + "." : ""}`.trim();
       const prefix = user.title_prefix ? `${user.title_prefix} ` : "";
       const role = user.designation || (user.student_no || user.section_id || user.section ? "Student" : "Faculty");
@@ -1256,7 +1435,7 @@
 
             <!-- Scannable High-Res QR Code -->
             <div class="bg-white border-2 border-[#DEDACE] rounded-xl p-2 shadow-xs my-2.5 flex flex-col items-center">
-              <img src="${qrDataUrl}" class="w-32 h-32 object-contain" alt="QR Credential">
+              <img src="${qrDataUrl}" class="w-36 h-36 object-contain" alt="QR Credential">
               <span class="text-[9px] font-mono text-[#8A6A0C] font-bold mt-1 tracking-wider">${idNum}</span>
             </div>
 

@@ -1,4 +1,4 @@
-// ============================================================================
+﻿﻿// ============================================================================
 //  Unified portal login
 //  Talks to Supabase via the `sb` client (supabaseClient.js) and uses the
 //  shared session helpers from session.js.
@@ -183,10 +183,24 @@ function routeToDestination(designation) {
 }
 
 async function checkScannerStatus() {
+  // ZKTeco is optional — QR login always works regardless of bridge status
+  const indicator = document.getElementById("scannerIndicator");
+  const statusText = document.getElementById("scannerStatusText");
   if (typeof ZKTeco !== "undefined") {
-    ZKTeco.startAutoPoller(2000);
-    const res = await ZKTeco.checkStatus();
-    ZKTeco.updateUiBadges(res);
+    try {
+      ZKTeco.startAutoPoller(3000);
+      const res = await Promise.race([
+        ZKTeco.checkStatus(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 2500))
+      ]);
+      ZKTeco.updateUiBadges(res);
+    } catch (e) {
+      if (indicator) indicator.className = "w-1.5 h-1.5 rounded-full bg-[#8A8D93]";
+      if (statusText) statusText.textContent = "ZKTeco: Offline — use QR Code to sign in above";
+    }
+  } else {
+    if (indicator) indicator.className = "w-1.5 h-1.5 rounded-full bg-[#8A8D93]";
+    if (statusText) statusText.textContent = "ZKTeco not found — use QR Code sign-in above";
   }
 }
 
@@ -203,28 +217,14 @@ async function handleFingerprintLogin() {
   // Check scanner status first
   const status = await ZKTeco.checkStatus();
   if (!status.ok) {
-    errEl.innerHTML = `
-      <div class="mb-1 font-semibold text-[#8A3420]">ZKTeco Live20R Bridge is not running.</div>
-      <div class="text-[11px] text-[#6B7060]">The local biometric bridge service is offline. You can sign in using your QR Code Digital ID:</div>
-      <button type="button" id="loginOfflineQrBtn" class="mt-2 w-full bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition">
-        <img src="ICON/qr.svg" class="w-3.5 h-3.5 invert" alt=""> Sign in with QR Code ID
-      </button>
-    `;
-    errEl.classList.remove("hidden");
-    document.getElementById("loginOfflineQrBtn")?.addEventListener("click", handleQrLogin);
+    // ZKTeco bridge offline -- fallback to QR
+    handleQrLogin();
     return;
   }
 
   if (status.device && !status.device.connected) {
-    errEl.innerHTML = `
-      <div class="font-semibold text-[#8A3420]">ZKTeco Live20R scanner is not detected.</div>
-      <div class="text-[11px] text-[#6B7060] mt-0.5">Plug in your scanner, or sign in using your QR Code ID alternative:</div>
-      <button type="button" id="loginNoDevQrBtn" class="mt-2 w-full bg-[#14432A] hover:bg-[#1B5636] text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition">
-        <img src="ICON/qr.svg" class="w-3.5 h-3.5 invert" alt=""> Sign in with QR Code ID
-      </button>
-    `;
-    errEl.classList.remove("hidden");
-    document.getElementById("loginNoDevQrBtn")?.addEventListener("click", handleQrLogin);
+    // ZKTeco device not connected -- fallback to QR
+    handleQrLogin();
     return;
   }
 
@@ -285,9 +285,10 @@ async function handleQrLogin() {
   const errEl = $("loginError");
   if (errEl) errEl.classList.add("hidden");
 
+  // QRClient is pure JS — works fully offline, no ZKTeco bridge required
   if (typeof QRClient === "undefined") {
     if (errEl) {
-      errEl.textContent = "QR Client library is not loaded.";
+      errEl.textContent = "QR scanner library not loaded. Refresh the page and try again.";
       errEl.classList.remove("hidden");
     }
     return;
@@ -295,7 +296,8 @@ async function handleQrLogin() {
 
   QRClient.openScannerModal({
     title: "ESSU Digital ID Sign-In",
-    subtitle: "Present your printed or digital ESSU ID QR code to the camera.",
+    subtitle: "Point camera at your printed or digital ESSU QR ID card.",
+    allowSwitchToBio: true,
     onSuccess: async (decodedText) => {
       if (errEl) errEl.classList.add("hidden");
       try {
@@ -308,25 +310,28 @@ async function handleQrLogin() {
 
         let targetUser = null;
 
-        const isSuperAdminQr = 
-          queryTerm.toLowerCase() === "superadmin" || 
-          queryTerm.toLowerCase() === "admin" || 
+        const isSuperAdminQr =
+          queryTerm.toLowerCase() === "superadmin" ||
+          queryTerm.toLowerCase() === "admin" ||
           queryTerm === "admin-master" ||
-          queryTerm === "3" && (parsed?.role === "Super Admin" || String(parsed?.name || "").toLowerCase().includes("super")) ||
+          (queryTerm === "3" && (parsed?.role === "Super Admin" || String(parsed?.name || "").toLowerCase().includes("super"))) ||
           (parsed?.username && (parsed.username.toLowerCase() === "superadmin" || parsed.username.toLowerCase() === "admin")) ||
           (parsed?.role && String(parsed.role).toLowerCase().includes("super")) ||
           (parsed?.name && String(parsed.name).toLowerCase().includes("super")) ||
           (decodedText && decodedText.toLowerCase().includes("superadmin"));
 
-        // 1. Try finding in app_users
+        // 1. Supabase app_users — with timeout so offline doesn't block
         if (!parsed || parsed.role !== "student") {
           try {
             if (typeof sb !== "undefined" && sb && sb.from) {
-              const { data: staffList } = await sb.from("app_users").select("id, first_name, last_name, designation, college_id, department_id, username");
+              const { data: staffList } = await Promise.race([
+                sb.from("app_users").select("id, first_name, last_name, designation, college_id, department_id, username"),
+                new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))
+              ]);
               if (staffList) {
-                targetUser = staffList.find(u => 
+                targetUser = staffList.find(u =>
                   (isSuperAdminQr && (u.username?.toLowerCase() === "superadmin" || u.designation === "Super Admin")) ||
-                  String(u.id) === String(queryTerm) || 
+                  String(u.id) === String(queryTerm) ||
                   (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
                   (parsed?.username && u.username && u.username.toLowerCase() === parsed.username.toLowerCase()) ||
                   (parsed?.id && String(u.id) === String(parsed.id))
@@ -334,52 +339,66 @@ async function handleQrLogin() {
                 if (targetUser) targetUser.role = "staff";
               }
             }
-          } catch (e) {
-            console.warn("Supabase staff query notice in QR:", e);
-          }
+          } catch (e) { /* offline — continue to local fallbacks */ }
         }
 
-        // 2. Try finding in students
+        // 2. Supabase students — with timeout
         if (!targetUser && (!parsed || parsed.role !== "staff") && !isSuperAdminQr) {
           try {
             if (typeof sb !== "undefined" && sb && sb.from) {
-              const { data: studentList } = await sb.from("students").select("id, first_name, last_name, section_id, college_id, department_id, username, student_number");
+              const { data: studentList } = await Promise.race([
+                sb.from("students").select("id, first_name, last_name, section_id, college_id, department_id, username, student_number"),
+                new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))
+              ]);
               if (studentList) {
-                targetUser = studentList.find(s => 
-                  String(s.id) === String(queryTerm) || 
+                targetUser = studentList.find(s =>
+                  String(s.id) === String(queryTerm) ||
                   (s.username && s.username.toLowerCase() === queryTerm.toLowerCase()) ||
                   (parsed?.username && s.username && s.username.toLowerCase() === parsed.username.toLowerCase()) ||
                   (s.student_number && (String(s.student_number) === String(queryTerm) || String(s.student_number) === String(parsed?.id_num))) ||
                   (parsed?.id && String(s.id) === String(parsed.id))
                 );
-                if (targetUser) {
-                  targetUser.role = "student";
-                  targetUser.designation = "Student";
-                }
+                if (targetUser) { targetUser.role = "student"; targetUser.designation = "Student"; }
               }
             }
-          } catch (e) {
-            console.warn("Supabase student query notice in QR:", e);
-          }
+          } catch (e) { /* offline */ }
         }
 
-        // 3. Fallback: Search local biometric vault & local records
-        if (!targetUser && typeof ZKTeco !== "undefined") {
-          const vault = ZKTeco.getBiometricVault();
-          for (const u of Object.values(vault)) {
-            if (!u) continue;
-            if ((isSuperAdminQr && (u.username?.toLowerCase() === "superadmin" || u.designation === "Super Admin")) ||
-                String(u.id) === String(queryTerm) || 
-                (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
-                (u.student_number && String(u.student_number) === String(queryTerm)) ||
-                (parsed?.id && String(u.id) === String(parsed.id))) {
-              targetUser = u;
-              break;
+        // 3. Local ZKTeco biometric vault (offline-capable)
+        if (!targetUser) {
+          try {
+            if (typeof ZKTeco !== "undefined" && typeof ZKTeco.getBiometricVault === "function") {
+              const vault = ZKTeco.getBiometricVault();
+              for (const u of Object.values(vault)) {
+                if (!u) continue;
+                if (
+                  (isSuperAdminQr && (u.username?.toLowerCase() === "superadmin" || u.designation === "Super Admin")) ||
+                  String(u.id) === String(queryTerm) ||
+                  (u.username && u.username.toLowerCase() === queryTerm.toLowerCase()) ||
+                  (u.student_number && String(u.student_number) === String(queryTerm)) ||
+                  (parsed?.id && String(u.id) === String(parsed.id))
+                ) { targetUser = u; break; }
+              }
             }
-          }
+          } catch (e) { /* vault error */ }
         }
 
-        // 4. Fallback: Check Official Sample School ID Entities (All Entities)
+        // 4. Currently-logged-in session self-scan
+        if (!targetUser) {
+          try {
+            const sess = typeof getPortalSession === "function" ? getPortalSession() : null;
+            if (sess && sess.id) {
+              const sid = String(sess.id);
+              if (sid === String(queryTerm) ||
+                  (parsed?.id && sid === String(parsed.id)) ||
+                  (sess.username && parsed?.username && sess.username.toLowerCase() === parsed.username.toLowerCase())) {
+                targetUser = { ...sess, role: sess.role || "staff" };
+              }
+            }
+          } catch (e) { /* ignore */ }
+        }
+
+        // 5. Sample entities (always available offline — demo / test mode)
         if (!targetUser && typeof QRClient !== "undefined" && QRClient.SAMPLE_ENTITIES) {
           const sampleMatch = Object.values(QRClient.SAMPLE_ENTITIES).find(ent =>
             (isSuperAdminQr && (ent.username === "superadmin" || ent.designation === "Super Admin")) ||
@@ -399,7 +418,7 @@ async function handleQrLogin() {
           }
         }
 
-        // 5. Fallback: Emergency Super Admin check
+        // 6. Emergency Super Admin QR (always works offline)
         if (!targetUser && isSuperAdminQr) {
           targetUser = {
             id: (parsed?.id && parsed.id !== "superadmin") ? parsed.id : "admin-master",
@@ -414,7 +433,7 @@ async function handleQrLogin() {
 
         if (!targetUser) {
           if (errEl) {
-            errEl.textContent = `No ESSU account found matching credential: "${queryTerm || decodedText}".`;
+            errEl.innerHTML = `<div class="mb-1 font-semibold">No account found for this QR credential.</div><div class="text-[11px] text-[#6B7060] mt-1">Make sure you are scanning an official ESSU Digital ID QR code. Credential: <span class="font-mono">${(queryTerm || decodedText).substring(0, 50)}</span></div>`;
             errEl.classList.remove("hidden");
           }
           return;
@@ -436,6 +455,7 @@ async function handleQrLogin() {
 
         setPortalSession(profile);
         routeToDestination(profile.designation);
+
       } catch (err) {
         console.error("QR login error:", err);
         if (errEl) {
@@ -445,9 +465,8 @@ async function handleQrLogin() {
       }
     },
     onError: (err) => {
-      console.warn("QR login error:", err);
       if (errEl) {
-        errEl.textContent = err.message || "QR Code scan cancelled or failed.";
+        errEl.textContent = err?.message || "QR scan cancelled or failed. Try again.";
         errEl.classList.remove("hidden");
       }
     }
