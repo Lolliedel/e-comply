@@ -1068,6 +1068,33 @@
       // Match handler
       const processScannedValue = (rawString) => {
         if (isProcessing) return;
+
+        // ── NEW: Try direct qr_token DB lookup first ──────────────────────
+        // If the scanned string is a hex token (64 chars), look it up in
+        // the students / app_users table via verifyQrToken() from supabaseClient.js
+        if (typeof verifyQrToken === 'function' && /^[0-9a-f]{64}$/i.test(rawString.trim())) {
+          isProcessing = true;
+          playBeepSound();
+          try {
+            const profile = await verifyQrToken(rawString.trim());
+            if (profile) {
+              alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#E1EEE6] border border-[#A2D1B8] text-[#1F6F4A] font-semibold flex items-center gap-2";
+              alertBox.innerHTML = `✓ <span>Verified: ${profile.first_name} ${profile.last_name}</span>`;
+              alertBox.classList.remove("hidden");
+              setTimeout(() => {
+                this.closeModal();
+                if (typeof setPortalSession === 'function') setPortalSession(profile);
+                if (typeof onMatch === 'function') onMatch(profile, profile);
+                if (typeof onSuccess === 'function') onSuccess(rawString, profile, profile);
+                if (typeof routeToDestination === 'function') routeToDestination(profile.designation);
+              }, 600);
+              return;
+            }
+          } catch (e) { console.warn('verifyQrToken error:', e); }
+          isProcessing = false;
+        }
+        // ── END NEW ───────────────────────────────────────────────────────
+
         const parsed = this.parseUserQrPayload(rawString);
         if (!parsed || (!parsed.id && !parsed.username && !parsed.id_num)) return;
         if (!parsed.id) parsed.id = parsed.username || parsed.id_num || "user";
@@ -1260,6 +1287,7 @@
             if (barcodeDetector && !decodedText) {
               try {
                 const codes = await barcodeDetector.detect(video);
+                console.debug('BarcodeDetector result:', codes);
                 if (codes && codes.length > 0 && codes[0].rawValue) {
                   decodedText = codes[0].rawValue;
                 }
