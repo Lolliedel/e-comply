@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 //  My Profile — shared across every role (Super Admin, Dean, Department
 //  Head, Faculty, Student). Reads the signed-in session, loads that
 //  person's own record from the right table, and lets them edit their
@@ -476,9 +476,14 @@ document.addEventListener("DOMContentLoaded", () => {
   $("testMyFingerprintBtn")?.addEventListener("click", handleTestFingerprint);
   $("removeMyFingerprintBtn")?.addEventListener("click", handleRemoveFingerprint);
 
-  $("profileDownloadQrBtn")?.addEventListener("click", () => {
+  $("profileDownloadQrBtn")?.addEventListener("click", async () => {
     if (typeof QRClient === "undefined") return;
-    const qrPayload = QRClient.getUserQrPayload({ ...record, ...profile });
+    // Fetch (or generate) the qr_token from DB so the QR encodes the secure token
+    let qrToken = null;
+    if (typeof ensureUserQrToken === "function" && profile && profile.id) {
+      qrToken = await ensureUserQrToken(profile.role, profile.id).catch(() => null);
+    }
+    const qrPayload = QRClient.getUserQrPayload({ ...record, ...profile, qr_token: qrToken || undefined });
     const dataUrl = QRClient.generateDataUrl(qrPayload, { size: 350 });
     const a = document.createElement("a");
     a.href = dataUrl;

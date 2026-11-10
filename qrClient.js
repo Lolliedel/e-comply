@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ESSU E-Comply QR Code & Digital ID SDK (qrClient.js)
  * 
  * Provides complete offline QR Code generation, Digital University ID Card rendering,
@@ -587,6 +587,11 @@
      */
     getUserQrPayload(user) {
       if (!user) return "";
+      // If the user has a qr_token stored in DB, encode ONLY the token so the
+      // scanner can do a direct DB lookup (fastest, most secure path).
+      if (user.qr_token && /^[0-9a-f]{64}$/i.test(user.qr_token)) {
+        return user.qr_token;
+      }
       const id = String(user.id || "");
       const username = user.username || "";
       const idNum = user.student_number || user.student_no || user.employee_id || user.employee_no || "";
