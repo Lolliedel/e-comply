@@ -628,7 +628,7 @@
               return;
             } else {
               // No match
-              throw new Error("Fingerprint not recognized. Please register your fingerprint first.");
+              throw new Error("Fingerprint not registered: This fingerprint is not enrolled in the system. Please register your fingerprint first.");
             }
           } else {
             // Raw capture returned
@@ -659,17 +659,21 @@
               }
             });
           } else {
+            const isNotReg = rawMsg.toLowerCase().includes("not registered") || rawMsg.toLowerCase().includes("not recognized") || rawMsg.toLowerCase().includes("no match");
             alertEl.innerHTML = `
-              <div class="mb-1">${rawMsg || "Verification failed."}</div>
-              <div class="flex items-center justify-center gap-2 pt-1">
-                <button type="button" id="zkQuickEnrollPromptBtn" class="text-[11px] text-[#14432A] underline font-semibold hover:text-[#1B5636]">Enroll as Super Admin</button>
+              <div class="font-semibold text-xs text-[#8A3420] flex items-center justify-center gap-1.5 mb-1">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+                ${isNotReg ? "Fingerprint Not Registered" : "Verification Failed"}
+              </div>
+              <div class="text-[11px] text-[#8A3420] leading-snug mb-2">
+                ${isNotReg ? "This fingerprint is not registered in the system. Please <b>sign in with your username and password</b> to enroll your fingerprint, or use your QR code." : rawMsg}
+              </div>
+              <div class="flex items-center justify-center gap-2 pt-1 border-t border-[#E5B4A4]/50">
+                <button type="button" id="zkAlertQrBtnAlternative" class="text-[11px] text-[#14432A] underline font-semibold hover:text-[#1B5636]">Use QR Code Instead</button>
               </div>
             `;
-            document.getElementById("zkQuickEnrollPromptBtn")?.addEventListener("click", () => {
-              this.closeModal();
-              if (typeof window.quickEnrollSuperadminFingerprint === "function") {
-                window.quickEnrollSuperadminFingerprint();
-              }
+            document.getElementById("zkAlertQrBtnAlternative")?.addEventListener("click", () => {
+              triggerQrAlternative();
             });
           }
           alertEl.classList.remove("hidden");

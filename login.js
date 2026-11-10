@@ -1,4 +1,4 @@
-﻿﻿// ============================================================================
+// ============================================================================
 //  Unified portal login
 //  Talks to Supabase via the `sb` client (supabaseClient.js) and uses the
 //  shared session helpers from session.js.
@@ -240,19 +240,29 @@ async function handleFingerprintLogin() {
     console.warn("Could not load candidates:", err);
   }
 
-  if (!candidates || candidates.length === 0) {
+  // Filter candidates to ensure only those with actual biometric credentials or templates
+  candidates = (candidates || []).filter(c => c && (c.fingerprint_credential_id || c.template || c.biometric_template));
+
+  if (candidates.length === 0) {
     const sess = (typeof getPortalSession === "function") ? getPortalSession() : null;
     if (sess && (sess.fingerprint_credential_id || sess.template)) {
       candidates = [sess];
-    } else if (typeof QRClient !== "undefined" && QRClient.SAMPLE_ENTITIES) {
-      candidates = Object.values(QRClient.SAMPLE_ENTITIES);
     }
   }
 
+  // If no registered biometrics exist anywhere in the system, alert the user immediately
   if (!candidates || candidates.length === 0) {
-    if (typeof QRClient !== "undefined" && QRClient.SAMPLE_ENTITIES) {
-      candidates = Object.values(QRClient.SAMPLE_ENTITIES);
-    }
+    errEl.innerHTML = `
+      <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+        No Registered Fingerprints Found
+      </div>
+      <div class="text-[11px] text-[#6B7060]">
+        No accounts currently have a registered fingerprint. Please <b>sign in with your username and password</b> first to enroll your fingerprint in your profile, or use QR Code sign-in.
+      </div>
+    `;
+    errEl.classList.remove("hidden");
+    return;
   }
 
   ZKTeco.openVerifyModal({
@@ -279,7 +289,21 @@ async function handleFingerprintLogin() {
     },
     onError: (err) => {
       console.warn("Biometric login error:", err);
-      errEl.textContent = err.message || "Fingerprint not recognized.";
+      const msg = err?.message || "";
+      const isNotReg = msg.toLowerCase().includes("not registered") || msg.toLowerCase().includes("not recognized") || msg.toLowerCase().includes("no match");
+      if (isNotReg) {
+        errEl.innerHTML = `
+          <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+            Fingerprint Not Registered
+          </div>
+          <div class="text-[11px] text-[#6B7060]">
+            This fingerprint is not registered in the system. Please <b>sign in with your username and password</b> to register your fingerprint in your profile, or use QR Code sign-in.
+          </div>
+        `;
+      } else {
+        errEl.textContent = msg || "Fingerprint verification failed. Try again or use QR login.";
+      }
       errEl.classList.remove("hidden");
     }
   });
@@ -314,7 +338,15 @@ async function handleQrLogin() {
             return;
           }
           if (errEl) {
-            errEl.textContent = "QR code not recognized. Please log in with username and password.";
+            errEl.innerHTML = `
+              <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+                QR Code Not Registered
+              </div>
+              <div class="text-[11px] text-[#6B7060]">
+                This QR code is not registered to any ESSU account. Please <b>sign in with your username and password</b> first to activate your QR code.
+              </div>
+            `;
             errEl.classList.remove("hidden");
           }
           return;
@@ -452,7 +484,15 @@ async function handleQrLogin() {
 
         if (!targetUser) {
           if (errEl) {
-            errEl.innerHTML = `<div class="mb-1 font-semibold">No account found for this QR credential.</div><div class="text-[11px] text-[#6B7060] mt-1">Make sure you are scanning an official ESSU Digital ID QR code. Credential: <span class="font-mono">${(queryTerm || decodedText).substring(0, 50)}</span></div>`;
+            errEl.innerHTML = `
+              <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+                QR Code Not Registered
+              </div>
+              <div class="text-[11px] text-[#6B7060]">
+                No ESSU account was found for this QR code. Please <b>sign in with your username and password</b> first, or make sure you are scanning your official ESSU Digital ID.
+              </div>
+            `;
             errEl.classList.remove("hidden");
           }
           return;
@@ -478,14 +518,34 @@ async function handleQrLogin() {
       } catch (err) {
         console.error("QR login error:", err);
         if (errEl) {
-          errEl.textContent = err.message || "Failed to authenticate with QR credential.";
+          errEl.innerHTML = `
+            <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+              QR Code Not Recognized
+            </div>
+            <div class="text-[11px] text-[#6B7060]">
+              ${err.message || "Failed to authenticate with QR credential. Please sign in with your username and password."}
+            </div>
+          `;
           errEl.classList.remove("hidden");
         }
       }
     },
     onError: (err) => {
       if (errEl) {
-        errEl.textContent = err?.message || "QR scan cancelled or failed. Try again.";
+        const msg = err?.message || "";
+        const isNotReg = msg.toLowerCase().includes("not registered") || msg.toLowerCase().includes("not recognized");
+        if (isNotReg) {
+          errEl.innerHTML = `
+            <div class="font-semibold text-xs text-[#8A3420] flex items-center gap-1.5 mb-1">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+              QR Code Not Registered
+            </div>
+            <div class="text-[11px] text-[#6B7060]">${msg}</div>
+          `;
+        } else {
+          errEl.textContent = msg || "QR scan cancelled or failed. Try again.";
+        }
         errEl.classList.remove("hidden");
       }
     }

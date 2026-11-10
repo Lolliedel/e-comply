@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ESSU E-Comply QR Code & Digital ID SDK (qrClient.js)
  * 
  * Provides complete offline QR Code generation, Digital University ID Card rendering,
@@ -1096,12 +1096,43 @@
               return;
             }
           } catch (e) { console.warn('verifyQrToken error:', e); }
-          isProcessing = false;
+
+          // QR token is a hex token but was not found in the database (not registered)
+          alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] flex flex-col gap-1";
+          alertBox.innerHTML = `
+            <div class="font-semibold flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+              QR Code Not Registered
+            </div>
+            <div class="text-[11px] leading-snug">This QR code is not registered to any user. Please <b>sign in with your username and password</b> first to activate your QR code.</div>
+          `;
+          alertBox.classList.remove("hidden");
+          if (typeof onError === 'function') {
+            onError(new Error("QR code is not registered in the system. Please sign in with username and password first."));
+          }
+          setTimeout(() => { isProcessing = false; }, 3500);
+          return;
         }
         // ── END NEW ───────────────────────────────────────────────────────
 
         const parsed = this.parseUserQrPayload(rawString);
-        if (!parsed || (!parsed.id && !parsed.username && !parsed.id_num)) return;
+        if (!parsed || (!parsed.id && !parsed.username && !parsed.id_num)) {
+          isProcessing = true;
+          alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] flex flex-col gap-1";
+          alertBox.innerHTML = `
+            <div class="font-semibold flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+              QR Code Not Recognized
+            </div>
+            <div class="text-[11px] leading-snug">The scanned QR code is not a valid ESSU Digital ID. Please scan your registered ESSU QR code.</div>
+          `;
+          alertBox.classList.remove("hidden");
+          if (typeof onError === 'function') {
+            onError(new Error("The scanned QR code is not a recognized ESSU credential."));
+          }
+          setTimeout(() => { isProcessing = false; }, 3000);
+          return;
+        }
         if (!parsed.id) parsed.id = parsed.username || parsed.id_num || "user";
 
         isProcessing = true;
@@ -1152,11 +1183,26 @@
         }
 
         if (candidates && candidates.length > 0 && !matched) {
-          // Scanned someone not in candidate list
-          alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] flex items-center gap-2";
-          alertBox.innerHTML = `<img src="ICON/delete.svg" class="w-3.5 h-3.5" alt=""> <span>Scanned ID (#${parsed.id}) does not match the required signee or enrolled student.</span>`;
+          // Scanned QR not found — give specific "not registered" feedback
+          const isLoginScanner = !candidates || candidates.length === 0;
+          alertBox.className = "mt-3 p-2.5 rounded-xl text-xs bg-[#FBEAE4] border border-[#E5B4A4] text-[#8A3420] flex flex-col gap-1";
+          if (isLoginScanner) {
+            alertBox.innerHTML = `
+              <div class="font-semibold flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z"/></svg>
+                QR Code Not Registered
+              </div>
+              <div class="text-[11px] leading-snug">This QR code is not linked to any ESSU account. Please <b>log in with your username and password</b> first to register your QR.</div>`;
+          } else {
+            alertBox.innerHTML = `
+              <div class="font-semibold flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                QR Not Authorized
+              </div>
+              <div class="text-[11px] leading-snug">Scanned ID <b>#${parsed.id}</b> is not in the list of authorized users for this action.</div>`;
+          }
           alertBox.classList.remove("hidden");
-          setTimeout(() => { isProcessing = false; }, 2000);
+          setTimeout(() => { isProcessing = false; }, 3000);
           return;
         }
 
