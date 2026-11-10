@@ -108,6 +108,10 @@ async function handleLogin(ev) {
     const row = Array.isArray(rpcResponse) ? rpcResponse[0] : rpcResponse;
     if (row && !rpcError) {
       pendingProfile = normalizeLoginRow(row);
+      // Auto-generate QR token for this user on login (non-blocking)
+      if (typeof ensureUserQrToken === "function" && pendingProfile.id) {
+        ensureUserQrToken(pendingProfile.role, pendingProfile.id).catch(() => {});
+      }
       if (pendingProfile.must_change_password) {
         $("loginScreen").classList.add("hidden");
         $("forcePasswordScreen").classList.remove("hidden");
@@ -301,6 +305,21 @@ async function handleQrLogin() {
     onSuccess: async (decodedText) => {
       if (errEl) errEl.classList.add("hidden");
       try {
+        // ── NEW: Direct hex-token DB login ─────────────────────────────
+        if (/^[0-9a-f]{64}$/i.test((decodedText || "").trim()) && typeof verifyQrToken === "function") {
+          const profile = await verifyQrToken(decodedText.trim());
+          if (profile) {
+            setPortalSession(profile);
+            routeToDestination(profile.designation);
+            return;
+          }
+          if (errEl) {
+            errEl.textContent = "QR code not recognized. Please log in with username and password.";
+            errEl.classList.remove("hidden");
+          }
+          return;
+        }
+        // ── END NEW ────────────────────────────────────────────────────
         const parsed = QRClient.parseUserQr(decodedText);
         const queryTerm = (parsed?.id || parsed?.id_num || parsed?.student_number || parsed?.employee_id || decodedText).trim();
 

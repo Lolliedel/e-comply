@@ -1066,7 +1066,7 @@
       }
 
       // Match handler
-      const processScannedValue = (rawString) => {
+      const processScannedValue = async (rawString) => {
         if (isProcessing) return;
 
         // ── NEW: Try direct qr_token DB lookup first ──────────────────────
